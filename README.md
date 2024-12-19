@@ -15,3 +15,7 @@ The goal of this project is to implement and validate the algorithm proposed in 
 - Implementation of the algorithm described in the paper.
 - Reproduction of experimental results to verify the claims made in the publication.
 - Analysis of the algorithm's performance under various fault conditions.
+
+## Progress:
+
+**2024.12.19**  Algorithm 1 has been successfully reproduced! See ‘Hamiltonian_Path_v2.0’.
