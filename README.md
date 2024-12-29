@@ -19,3 +19,5 @@ The goal of this project is to implement and validate the algorithm proposed in 
 ## Progress:
 
 **2024.12.19**  Algorithm 1 has been successfully reproduced! See ‘Hamiltonian_Path_v2.0.py’.
+
+**2024.12.29** All works has benn successfully reproduced! Algorithm 1 and Algorithm 2 are included in "Hamiltonian_Path.py".
