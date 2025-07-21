@@ -151,7 +151,7 @@ class ComprehensiveTheoryAnalyzer:
                     best_separation = separation
                     best_dim = dim
             
-            print(f"    n={n}, k={k}: 最优维度={best_dim}, 分离度={best_separation:.4f}")
+            print(f"    n={n}, k={k}: 选择维度={best_dim}, 分离度={best_separation:.4f}")
 
         self.analysis_results['basic_decomposition'] = True
         
@@ -242,7 +242,7 @@ class ComprehensiveTheoryAnalyzer:
 
             is_decreasing = all(modification_factors[i] >= modification_factors[i+1]
                                for i in range(len(modification_factors)-1))
-            print(f"    k={k}: 递减性={'满足' if is_decreasing else '不满足'}")
+            print(f"    k={k}: 递减性={is_decreasing}")
 
         self.analysis_results['basic_asymptotic'] = True
         
@@ -387,7 +387,7 @@ class ComprehensiveTheoryAnalyzer:
                 cluster_separation=2
             )
 
-            # 使用更精确的时间测量，进行多次测量取平均值
+            # 进行多次测量取平均值
             def single_calculation():
                 analyzer = RegionBasedFaultAnalyzer(Q, rbf_params)
                 return analyzer.calculate_rbf_fault_tolerance()
@@ -409,9 +409,9 @@ class ComprehensiveTheoryAnalyzer:
             print(f"  {n}元{k}维: 网络大小={network_size}, 计算时间={computation_time:.6f}s (平均{num_runs}次)")
         
         max_time = max(d['time'] for d in complexity_data)
-        reasonable_growth = max_time < 10.0
-        
-        self.analysis_results['high_dim_complexity'] = reasonable_growth
+        complexity_acceptable = max_time < 10.0
+
+        self.analysis_results['high_dim_complexity'] = complexity_acceptable
         self.performance_data['complexity'] = complexity_data
         
 
@@ -466,9 +466,8 @@ class ComprehensiveTheoryAnalyzer:
             
             stability_passed = stability_passed and stable
             
-            status = "✓ (符合理论)" if stable else "✗ (需检查)"
             print(f"  {name}: 基准={base_tolerance}, 扰动={perturbed_tolerance}, "
-                  f"变化={relative_change:.1f}% {status}")
+                  f"变化={relative_change:.1f}%")
         
         self.analysis_results['high_dim_stability'] = stability_passed
 
@@ -692,9 +691,8 @@ class ComprehensiveTheoryAnalyzer:
                         'satisfies': satisfies_condition, 'tolerance': tolerance
                     })
 
-                    status = "满足" if satisfies_condition else "不满足"
                     print(f"    {n}元{k}维: k_max={k_max}, s_max={s_max}, "
-                          f"乘积={k_max * s_max}, 限制={k/4:.1f}, {status}哈密尔顿条件")
+                          f"乘积={k_max * s_max}, 限制={k/4:.1f}, 哈密尔顿条件={satisfies_condition}")
 
         self.analysis_results['hamiltonian_conditions'] = True
         self.performance_data['hamiltonian_analysis'] = hamiltonian_results
@@ -769,7 +767,7 @@ class ComprehensiveTheoryAnalyzer:
 
         complexity_results = []
 
-        print("  专注于大规模网络的复杂度分析（避免小规模测试的时间测量不稳定性）:")
+        print("  大规模网络复杂度分析:")
         # 显示所有大规模案例的复杂度分析结果
         for n, k, num_clusters, cluster_size in test_cases:
             Q = QkCube(n=n, k=k)
@@ -810,12 +808,12 @@ class ComprehensiveTheoryAnalyzer:
                     path = embedder.embed_hamiltonian_path_strict_rbf(fault_edges, source, target)
                     return len(path) if path else 0
                 except Exception as e:
-                    # 如果算法失败，返回0（但记录错误用于调试）
-                    print(f"算法执行失败: {e}")
+                    # 如果算法失败，返回0
+                    print(f"算法执行异常: {e}")
                     return 0
 
-            # 对大规模测试进行适当次数运行（哈密尔顿路径算法较复杂）
-            num_runs = 5  # 减少运行次数，因为哈密尔顿路径算法更复杂
+            # 对大规模测试进行多次运行
+            num_runs = 5
             start_time = time.perf_counter()
             total_path_length = 0
             for _ in range(num_runs):
@@ -831,7 +829,7 @@ class ComprehensiveTheoryAnalyzer:
             # 1. 故障簇分析复杂度：O(|C| * s_max)
             fault_cluster_analysis = num_clusters * cluster_size
 
-            # 2. 最优维度选择复杂度：O(n * |C|^2 * s_max)
+            # 2. 维度选择复杂度：O(n * |C|^2 * s_max)
             dimension_selection = n * (num_clusters ** 2) * cluster_size
 
             # 3. 网络分解复杂度：O(k^n)
@@ -889,13 +887,13 @@ class ComprehensiveTheoryAnalyzer:
                 avg_time_growth = np.mean(time_growth_rates)
                 avg_complexity_growth = np.mean(complexity_growth_rates)
 
-                # 检查是否符合线性增长（允许一定误差）
+                # 计算增长比率
                 growth_ratio = avg_time_growth / avg_complexity_growth if avg_complexity_growth > 0 else 0
-                is_linear = 0.5 <= growth_ratio <= 2.0  # 允许2倍的误差范围
+                is_linear = 0.5 <= growth_ratio <= 2.0
 
                 print(f"  复杂度分析: 平均时间增长率={avg_time_growth:.3f}, "
                       f"平均理论增长率={avg_complexity_growth:.3f}")
-                print(f"  增长比率={growth_ratio:.3f}, 线性性={'符合' if is_linear else '需进一步优化'}")
+                print(f"  增长比率={growth_ratio:.3f}, 线性性={is_linear}")
 
             # 分析最大和最小时间
             max_time = max(times)
@@ -966,8 +964,8 @@ class ComprehensiveTheoryAnalyzer:
             print(f"    {n}元{k}维: 理论界={theoretical_bound}, 计算值={calculated_bound}, "
                   f"极限值={extreme_bound}, 紧性={tightness_ratio:.3f}")
 
-        # 分析修正因子的有效范围
-        print("  修正因子有效范围分析:")
+        # 分析修正因子的数值范围
+        print("  修正因子数值范围分析:")
 
         for n in range(3, 7):
             for k in [3, 4, 5]:
@@ -976,388 +974,551 @@ class ComprehensiveTheoryAnalyzer:
                     alpha_spatial = (1 + 0.5 * (1 - 0.5)) * (1 + math.log(1 + d_sep) / 10)
                     alpha_total = alpha_struct * alpha_spatial
 
-                    # 检查修正因子是否在合理范围内
+                    # 检查修正因子范围
                     is_reasonable = 1.0 <= alpha_total <= 4.0
 
                     if not is_reasonable:
-                        print(f"    警告: {n}元{k}维, d_sep={d_sep}: α={alpha_total:.3f} 超出合理范围")
+                        print(f"    {n}元{k}维, d_sep={d_sep}: α={alpha_total:.3f}")
 
         # 计算平均紧性
         avg_tightness = np.mean([r['tightness'] for r in tightness_results]) if tightness_results else 0
-        bounds_are_tight = avg_tightness >= 0.8  # 如果平均紧性超过80%，认为界限是紧的
+        bounds_are_tight = avg_tightness >= 0.8
 
-        print(f"  整体紧性分析: 平均紧性={avg_tightness:.3f}, "
-              f"界限紧性={'良好' if bounds_are_tight else '需改进'}")
+        print(f"  整体紧性分析: 平均紧性={avg_tightness:.3f}")
 
         self.analysis_results['bounds_tightness'] = bounds_are_tight
         self.performance_data['tightness_analysis'] = tightness_results
 
     def generate_comprehensive_visualizations(self):
-        """生成综合可视化图表"""
+        """生成综合可视化图表 - 每个子图都是正方形，然后手动拼接"""
         try:
-            # 创建更大的图表以容纳更多子图 - 使用正方形布局
-            fig = plt.figure(figsize=(20, 20))  # 使用正方形布局，每个子图也是正方形
-
-            # 设置子图间距，确保每个子图都是正方形
-            plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05,
-                              wspace=0.3, hspace=0.4)
-
-            # 图1：容错能力随维度变化
-            if 'scaling' in self.performance_data:
-                ax1 = plt.subplot(3, 4, 1)
-                for k, data in self.performance_data['scaling'].items():
-                    plt.plot(data['dimensions'], data['rbf_tolerance'], 'o-',
-                            label=f'RBF k={k}', linewidth=2, markersize=6)
-                    plt.plot(data['dimensions'], data['pef_tolerance'], 's--',
-                            label=f'PEF k={k}', linewidth=2, markersize=6)
-
-                plt.xlabel('Network Dimension')
-                plt.ylabel('Fault Tolerance')
-                plt.title('Fault Tolerance vs Network Dimension')
-                plt.legend()
-                plt.grid(True, alpha=0.3)
-
-            # 图2：提升比例
-            if 'scaling' in self.performance_data:
-                ax2 = plt.subplot(3, 4, 2)
-                for k, data in self.performance_data['scaling'].items():
-                    improvements = [(rbf/pef - 1)*100 for rbf, pef in
-                                   zip(data['rbf_tolerance'], data['pef_tolerance'])]
-                    plt.plot(data['dimensions'], improvements, 'o-',
-                            label=f'k={k}', linewidth=2, markersize=6)
-
-                plt.xlabel('Network Dimension')
-                plt.ylabel('Improvement (%)')
-                plt.title('RBF vs PEF Improvement')
-                plt.legend()
-                plt.grid(True, alpha=0.3)
-
-            # 图3：扩展的渐近行为分析
-            plt.subplot(3, 4, 3)
-            # 生成更多维度的渐近行为数据
-            extended_dimensions = list(range(3, 12))  # 扩展到12维
-            extended_ratios = []
-
-            for n in extended_dimensions:
-                # 使用理论公式计算修正因子的渐近行为
-                alpha_struct = 1.0 + 0.8 / (1 + 0.3 * n)  # 递减趋势
-                ratio = alpha_struct + 0.8  # 转换为提升比率
-                extended_ratios.append(ratio)
-
-            plt.plot(extended_dimensions, extended_ratios, 'ro-',
-                    linewidth=2, markersize=6)
-
-            # 添加趋势线
-            z = np.polyfit(extended_dimensions, extended_ratios, 2)
-            p = np.poly1d(z)
-            plt.plot(extended_dimensions, p(extended_dimensions), 'b--',
-                    alpha=0.7, linewidth=1, label='Trend')
-
-            plt.xlabel('Network Dimension (n)')
-            plt.ylabel('Modification Factor')
-            plt.title('Extended Asymptotic Behavior')
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-
-            # 图4：基础vs高维比较
-            plt.subplot(3, 4, 4)
-            if 'basic_pef' in self.performance_data:
-                all_data = self.performance_data['basic_pef']
-
-                # 正确分组：3-5维为基础，6-10维为高维
-                basic_improvements = [d['improvement'] for d in all_data if d['k'] <= 5]
-                high_dim_improvements = [d['improvement'] for d in all_data if d['k'] >= 6]
-
-                categories = ['Basic (3-5D)', 'High-Dim (6-10D)']
-                avg_improvements = [np.mean(basic_improvements), np.mean(high_dim_improvements)]
-
-                bars = plt.bar(categories, avg_improvements, color=['skyblue', 'lightcoral'])
-                plt.ylabel('Average Improvement (%)')
-                plt.title('Basic vs High-Dimensional Performance')
-                plt.grid(True, alpha=0.3)
-
-                # 添加数值标签
-                for bar, value in zip(bars, avg_improvements):
-                    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                            f'{value:.1f}%', ha='center', va='bottom')
-
-            # 图5：参数敏感性热力图
-            if 'basic_rbf' in self.performance_data:
-                plt.subplot(3, 4, 5)
-                basic_data = self.performance_data['basic_rbf']
-
-                # 创建参数敏感性矩阵
-                n_values = sorted(list(set([d['n'] for d in basic_data])))
-                k_values = sorted(list(set([d['k'] for d in basic_data])))
-
-                sensitivity_matrix = np.zeros((len(n_values), len(k_values)))
-                for i, n in enumerate(n_values):
-                    for j, k in enumerate(k_values):
-                        # 找到对应的数据点
-                        matching_data = [d for d in basic_data if d['n'] == n and d['k'] == k]
-                        if matching_data:
-                            sensitivity_matrix[i, j] = matching_data[0]['alpha_struct']
-
-                im = plt.imshow(sensitivity_matrix, cmap='viridis', aspect='auto')
-                plt.colorbar(im, shrink=0.8)
-                plt.xlabel('Network Dimension (k)')
-                plt.ylabel('Network Arity (n)')
-                plt.title('Parameter Sensitivity Heatmap')
-                plt.xticks(range(len(k_values)), k_values)
-                plt.yticks(range(len(n_values)), n_values)
-
-            # 图6：扩展的分离距离影响分析
-            plt.subplot(3, 4, 6)
-            # 生成更多分离距离数据点
-            extended_d_seps = list(range(1, 8))  # 1-7的分离距离
-            extended_tolerances = []
-            extended_alphas = []
-
-            for d_sep in extended_d_seps:
-                # 使用基准配置计算不同分离距离的影响
-                alpha_spatial = 1.0 + 0.4 * (1 - np.exp(-d_sep/2))  # 指数增长模型
-                base_tolerance = 40
-                tolerance = base_tolerance * alpha_spatial
-                extended_tolerances.append(tolerance)
-                extended_alphas.append(alpha_spatial)
-
-            plt.plot(extended_d_seps, extended_tolerances, 'bo-', label='Fault Tolerance', linewidth=2, markersize=6)
-            plt.plot(extended_d_seps, [a*100 for a in extended_alphas], 'rs--', label='α_spatial×100', linewidth=2, markersize=6)
-
-            plt.xlabel('Separation Distance')
-            plt.ylabel('Value')
-            plt.title('Extended Separation Distance Effects')
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-
-            # 图7：网络规模vs容错能力
-            if 'basic_pef' in self.performance_data:
-                plt.subplot(3, 4, 7)
-                basic_data = self.performance_data['basic_pef']
-
-                # 计算网络规模
-                network_sizes = [d['k'] ** d['n'] for d in basic_data]
-                rbf_tolerances = [d['rbf'] for d in basic_data]
-
-                plt.loglog(network_sizes, rbf_tolerances, 'bo-', linewidth=2, markersize=4)
-                plt.xlabel('Network Size (k^n)')
-                plt.ylabel('RBF Fault Tolerance')
-                plt.title('Network Size vs Fault Tolerance')
-                plt.grid(True, alpha=0.3)
-
-            # 图8：改进的算法复杂度分析
-            if 'complexity_analysis' in self.performance_data:
-                plt.subplot(3, 4, 8)
-                comp_data = self.performance_data['complexity_analysis']
-
-                sizes = [d['size'] for d in comp_data]
-                times = [d['time'] * 1000000 for d in comp_data]  # 转换为微秒
-                theoretical = [d['theoretical'] for d in comp_data]  # 保持原始理论复杂度
-
-                # 使用双y轴来正确显示两个不同量级的数据
-                ax1 = plt.gca()
-                ax2 = ax1.twinx()
-
-                # 左轴：实际时间（微秒）
-                ax1.semilogx(sizes, times, 'go-', linewidth=2, markersize=6, label='Actual Time (μs)')
-                ax1.set_xlabel('Network Size')
-                ax1.set_ylabel('Actual Time (μs)', color='g')
-                ax1.tick_params(axis='y', labelcolor='g')
-
-                # 右轴：理论复杂度
-                ax2.loglog(sizes, theoretical, 'r--', linewidth=2, markersize=4, label='Theoretical Complexity')
-                ax2.set_ylabel('Theoretical Complexity', color='r')
-                ax2.tick_params(axis='y', labelcolor='r')
-
-                plt.title('Algorithm Complexity (Large Scale)')
-
-                # 合并图例
-                lines1, labels1 = ax1.get_legend_handles_labels()
-                lines2, labels2 = ax2.get_legend_handles_labels()
-                ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-
-                ax1.grid(True, alpha=0.3)
-
-            # 图9：改进的修正因子分布
-            if 'basic_rbf' in self.performance_data:
-                plt.subplot(3, 4, 9)
-                basic_data = self.performance_data['basic_rbf']
-
-                alpha_struct_values = [d['alpha_struct'] for d in basic_data]
-                alpha_spatial_values = [d['alpha_spatial'] for d in basic_data]
-
-                # 使用不同颜色表示不同的n值
-                n_values = [d['n'] for d in basic_data]
-                unique_n = sorted(set(n_values))
-                colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink'][:len(unique_n)]
-
-                for i, n in enumerate(unique_n):
-                    mask = [nv == n for nv in n_values]
-                    struct_subset = [alpha_struct_values[j] for j, m in enumerate(mask) if m]
-                    spatial_subset = [alpha_spatial_values[j] for j, m in enumerate(mask) if m]
-                    plt.scatter(struct_subset, spatial_subset,
-                               c=colors[i], alpha=0.7, s=40, label=f'n={n}')
-
-                plt.xlabel('Structural Correction Factor')
-                plt.ylabel('Spatial Correction Factor')
-                plt.title('Correction Factors by Network Arity')
-                plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-                plt.grid(True, alpha=0.3)
-
-            # 图10：多参数敏感性分析
-            plt.subplot(3, 4, 10)
-            # 生成多参数敏感性数据
-            param_ranges = {
-                'k_max': list(range(1, 6)),
-                's_max': list(range(5, 30, 5)),
-                'd_sep': list(range(1, 6))
-            }
-
-            base_tolerance = 50
-            colors = ['blue', 'red', 'green']
-            markers = ['o-', 's--', '^:']
-
-            for i, (param_name, param_range) in enumerate(param_ranges.items()):
-                tolerances = []
-                for param_val in param_range:
-                    if param_name == 'k_max':
-                        tolerance = base_tolerance * (1 + 0.5 * param_val)
-                    elif param_name == 's_max':
-                        tolerance = base_tolerance * (1 + 0.02 * param_val)
-                    else:  # d_sep
-                        tolerance = base_tolerance * (1 + 0.1 * param_val)
-                    tolerances.append(tolerance)
-
-                plt.plot(param_range, tolerances, markers[i],
-                        color=colors[i], label=param_name, linewidth=2, markersize=6)
-
-            plt.xlabel('Parameter Value')
-            plt.ylabel('Fault Tolerance')
-            plt.title('Multi-Parameter Sensitivity Analysis')
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-
-            # 图11：维度对性能提升的影响
-            plt.subplot(3, 4, 11)
-            if 'basic_pef' in self.performance_data:
-                basic_data = self.performance_data['basic_pef']
-
-                # 按维度分组计算平均提升
-                dimension_improvements = {}
-                for d in basic_data:
-                    k = d['k']
-                    if k not in dimension_improvements:
-                        dimension_improvements[k] = []
-                    dimension_improvements[k].append(d['improvement'])
-
-                dimensions = sorted(dimension_improvements.keys())
-                avg_improvements = [np.mean(dimension_improvements[k]) for k in dimensions]
-
-                plt.plot(dimensions, avg_improvements, 'ro-', linewidth=2, markersize=8)
-                plt.xlabel('Network Dimension (k)')
-                plt.ylabel('Average Improvement (%)')
-                plt.title('Dimension vs Performance Improvement')
-                plt.grid(True, alpha=0.3)
-
-            # 图12：综合性能总结
-            ax12 = plt.subplot(3, 4, 12, projection='polar')
-            # 创建雷达图显示各项性能指标
-            categories = ['Fault\nTolerance', 'Theoretical\nAccuracy', 'Algorithm\nEfficiency',
-                         'Parameter\nStability', 'Bounds\nTightness']
-
-            # 计算各项指标的得分（0-1）
-            scores = []
-
-            # 容错能力得分（基于与PEF的比较和绝对容错能力）
-            if 'basic_pef' in self.performance_data:
-                improvements = [d['improvement'] for d in self.performance_data['basic_pef']]
-                rbf_tolerances = [d['rbf'] for d in self.performance_data['basic_pef']]
-
-                avg_improvement = np.mean(improvements)
-                avg_tolerance = np.mean(rbf_tolerances)
-
-                # 综合考虑改进幅度和绝对容错能力
-                improvement_score = min(1.0, avg_improvement / 150)  # 150%改进为满分
-                tolerance_score = min(1.0, avg_tolerance / 50)  # 50个故障为满分
-                fault_score = (improvement_score + tolerance_score) / 2
-
-                scores.append(fault_score)
-                print(f"  容错能力得分: {fault_score:.3f} (改进: {avg_improvement:.1f}%, 平均容错: {avg_tolerance:.1f})")
-            else:
-                scores.append(0.6)
-
-            # 理论精确性得分（由于理论公式完全准确，给予满分）
-            scores.append(1.0)
-
-            # 算法效率得分（基于复杂度分析）
-            if 'complexity_analysis' in self.performance_data:
-                times = [d['time'] for d in self.performance_data['complexity_analysis']]
-                if times:
-                    avg_time = np.mean(times)
-                    # 调整评分标准：50ms以内为满分，100ms为0.5分，200ms以上为最低分
-                    if avg_time <= 0.05:  # 50ms以内
-                        efficiency_score = 1.0
-                    elif avg_time <= 0.1:  # 50-100ms
-                        efficiency_score = 1.0 - (avg_time - 0.05) / 0.05 * 0.5  # 1.0到0.5线性递减
-                    elif avg_time <= 0.2:  # 100-200ms
-                        efficiency_score = 0.5 - (avg_time - 0.1) / 0.1 * 0.3  # 0.5到0.2线性递减
-                    else:  # 200ms以上
-                        efficiency_score = max(0.1, 0.2 - (avg_time - 0.2) / 0.3 * 0.1)  # 最低0.1
-
-                    scores.append(efficiency_score)
-                    print(f"  算法效率得分: {efficiency_score:.3f} (平均时间: {avg_time*1000:.3f}ms)")
-                else:
-                    scores.append(0.7)
-            else:
-                # 如果没有复杂度数据，基于理论分析给出合理得分
-                scores.append(0.75)
-
-            # 参数稳定性得分
-            scores.append(0.8)  # 基于稳定性分析的固定得分
-
-            # 界限紧性得分
-            if 'tightness_analysis' in self.performance_data:
-                avg_tightness = np.mean([d['tightness'] for d in self.performance_data['tightness_analysis']])
-                tightness_score = avg_tightness
-                scores.append(tightness_score)
-            else:
-                scores.append(0.7)
-
-            # 绘制雷达图
-            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False)
-            scores_plot = scores + [scores[0]]  # 闭合图形
-            angles_plot = np.concatenate((angles, [angles[0]]))
-
-            ax12.plot(angles_plot, scores_plot, 'o-', linewidth=2, markersize=6)
-            ax12.fill(angles_plot, scores_plot, alpha=0.25)
-            ax12.set_xticks(angles)
-            ax12.set_xticklabels(categories)
-            ax12.set_ylim(0, 1)
-            ax12.set_title('Overall Performance Summary')
-            ax12.grid(True)
-
-            # 使用更安全的布局方法，避免双轴图的aspect ratio问题
-            # 移除aspect ratio设置，使用subplots_adjust来控制布局
-            plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05,
-                              wspace=0.3, hspace=0.4)
-
-            # 保存图表
-            try:
-                plt.savefig('comprehensive_theory_analysis.png', dpi=600, bbox_inches='tight')
-                print("可视化图表已保存为: comprehensive_theory_analysis.png")
-            except Exception as save_error:
-                print(f"图表保存失败: {save_error}")
-
-            # 显示图表（可选）
-            # plt.show()
-
-            # 关闭图表以释放内存
-            plt.close()
-
+            # 创建单独的正方形子图，然后拼接
+            self.create_individual_square_plots()
+            self.stitch_plots_together()
+            print("可视化图表已生成完成")
         except Exception as e:
             print(f"生成可视化图表时出现错误: {e}")
             import traceback
             traceback.print_exc()
+
+    def create_individual_square_plots(self):
+        """创建单独的正方形子图"""
+        # 设置全局字体参数
+        plt.rcParams['font.size'] = 12
+        plt.rcParams['axes.titlesize'] = 14
+        plt.rcParams['axes.labelsize'] = 12
+        plt.rcParams['legend.fontsize'] = 10
+
+        # 创建存储单独图片的目录
+        import os
+        if not os.path.exists('individual_plots'):
+            os.makedirs('individual_plots')
+
+        # 定义正方形图片的尺寸
+        square_size = 6  # 6x6 英寸的正方形
+
+        # 图1：容错能力随维度变化
+        self.create_plot_1_fault_tolerance_vs_dimension(square_size)
+
+        # 图2：提升比例
+        self.create_plot_2_improvement_ratio(square_size)
+
+        # 图3：扩展的渐近行为分析
+        self.create_plot_3_asymptotic_behavior(square_size)
+
+        # 图4：基础vs高维比较
+        self.create_plot_4_basic_vs_high_dim(square_size)
+
+        # 图5：参数敏感性热力图
+        self.create_plot_5_parameter_sensitivity(square_size)
+
+        # 图6：扩展的分离距离影响分析
+        self.create_plot_6_separation_distance(square_size)
+
+        # 图7：网络规模vs容错能力
+        self.create_plot_7_network_size_vs_tolerance(square_size)
+
+        # 图8：改进的算法复杂度分析
+        self.create_plot_8_algorithm_complexity(square_size)
+
+        # 图9：改进的修正因子分布
+        self.create_plot_9_correction_factors(square_size)
+
+        # 图10：多参数敏感性分析
+        self.create_plot_10_multi_parameter_sensitivity(square_size)
+
+        # 图11：维度对性能提升的影响
+        self.create_plot_11_dimension_impact(square_size)
+
+        # 图12：综合性能总结
+        self.create_plot_12_performance_summary(square_size)
+
+    def create_plot_1_fault_tolerance_vs_dimension(self, square_size):
+        """创建图1：容错能力随维度变化"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'scaling' in self.performance_data:
+            for k, data in self.performance_data['scaling'].items():
+                plt.plot(data['dimensions'], data['rbf_tolerance'], 'o-',
+                        label=f'RBF k={k}', linewidth=2, markersize=6)
+                plt.plot(data['dimensions'], data['pef_tolerance'], 's--',
+                        label=f'PEF k={k}', linewidth=2, markersize=6)
+
+            plt.xlabel('Network Dimension')
+            plt.ylabel('Fault Tolerance')
+            plt.title('Fault Tolerance vs Network Dimension')
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_1_fault_tolerance.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_2_improvement_ratio(self, square_size):
+        """创建图2：提升比例"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'scaling' in self.performance_data:
+            for k, data in self.performance_data['scaling'].items():
+                improvements = [(rbf/pef - 1)*100 for rbf, pef in
+                               zip(data['rbf_tolerance'], data['pef_tolerance'])]
+                plt.plot(data['dimensions'], improvements, 'o-',
+                        label=f'k={k}', linewidth=2, markersize=6)
+
+            plt.xlabel('Network Dimension')
+            plt.ylabel('Improvement (%)')
+            plt.title('RBF vs PEF Improvement')
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_2_improvement.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_3_asymptotic_behavior(self, square_size):
+        """创建图3：扩展的渐近行为分析"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        # 生成更多维度的渐近行为数据
+        extended_dimensions = list(range(3, 12))  # 扩展到12维
+        extended_ratios = []
+
+        for n in extended_dimensions:
+            # 使用理论公式计算修正因子的渐近行为
+            alpha_struct = 1.0 + 0.8 / (1 + 0.3 * n)  # 递减趋势
+            ratio = alpha_struct + 0.8  # 转换为提升比率
+            extended_ratios.append(ratio)
+
+        plt.plot(extended_dimensions, extended_ratios, 'ro-',
+                linewidth=2, markersize=6)
+
+        # 添加趋势线
+        z = np.polyfit(extended_dimensions, extended_ratios, 2)
+        p = np.poly1d(z)
+        plt.plot(extended_dimensions, p(extended_dimensions), 'b--',
+                alpha=0.7, linewidth=1, label='Trend')
+
+        plt.xlabel('Network Dimension (n)')
+        plt.ylabel('Modification Factor')
+        plt.title('Extended Asymptotic Behavior')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_3_asymptotic.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_4_basic_vs_high_dim(self, square_size):
+        """创建图4：基础vs高维比较"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'basic_pef' in self.performance_data:
+            all_data = self.performance_data['basic_pef']
+
+            # 正确分组：3-5维为基础，6-10维为高维
+            basic_improvements = [d['improvement'] for d in all_data if d['k'] <= 5]
+            high_dim_improvements = [d['improvement'] for d in all_data if d['k'] >= 6]
+
+            categories = ['Basic (3-5D)', 'High-Dim (6-10D)']
+            avg_improvements = [np.mean(basic_improvements), np.mean(high_dim_improvements)]
+
+            bars = plt.bar(categories, avg_improvements, color=['skyblue', 'lightcoral'])
+            plt.ylabel('Average Improvement (%)')
+            plt.title('Basic vs High-Dimensional Performance')
+            plt.grid(True, alpha=0.3)
+
+            # 添加数值标签
+            for bar, value in zip(bars, avg_improvements):
+                plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                        f'{value:.1f}%', ha='center', va='bottom')
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_4_basic_vs_high.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_5_parameter_sensitivity(self, square_size):
+        """创建图5：参数敏感性热力图"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'basic_rbf' in self.performance_data:
+            basic_data = self.performance_data['basic_rbf']
+
+            # 创建参数敏感性矩阵
+            n_values = sorted(list(set([d['n'] for d in basic_data])))
+            k_values = sorted(list(set([d['k'] for d in basic_data])))
+
+            sensitivity_matrix = np.zeros((len(n_values), len(k_values)))
+            for i, n in enumerate(n_values):
+                for j, k in enumerate(k_values):
+                    # 找到对应的数据点
+                    matching_data = [d for d in basic_data if d['n'] == n and d['k'] == k]
+                    if matching_data:
+                        sensitivity_matrix[i, j] = matching_data[0]['alpha_struct']
+
+            im = plt.imshow(sensitivity_matrix, cmap='viridis', aspect='auto')
+            plt.colorbar(im, shrink=0.8)
+            plt.xlabel('Network Dimension (k)')
+            plt.ylabel('Network Arity (n)')
+            plt.title('Parameter Sensitivity Heatmap')
+            plt.xticks(range(len(k_values)), k_values)
+            plt.yticks(range(len(n_values)), n_values)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_5_sensitivity.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_6_separation_distance(self, square_size):
+        """创建图6：扩展的分离距离影响分析"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        # 生成更多分离距离数据点
+        extended_d_seps = list(range(1, 8))  # 1-7的分离距离
+        extended_tolerances = []
+        extended_alphas = []
+
+        for d_sep in extended_d_seps:
+            # 使用基准配置计算不同分离距离的影响
+            alpha_spatial = 1.0 + 0.4 * (1 - np.exp(-d_sep/2))  # 指数增长模型
+            base_tolerance = 40
+            tolerance = base_tolerance * alpha_spatial
+            extended_tolerances.append(tolerance)
+            extended_alphas.append(alpha_spatial)
+
+        plt.plot(extended_d_seps, extended_tolerances, 'bo-', label='Fault Tolerance', linewidth=2, markersize=6)
+        plt.plot(extended_d_seps, [a*100 for a in extended_alphas], 'rs--', label='α_spatial×100', linewidth=2, markersize=6)
+
+        plt.xlabel('Separation Distance')
+        plt.ylabel('Value')
+        plt.title('Extended Separation Distance Effects')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_6_separation.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_7_network_size_vs_tolerance(self, square_size):
+        """创建图7：网络规模vs容错能力"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'basic_pef' in self.performance_data:
+            basic_data = self.performance_data['basic_pef']
+
+            # 计算网络规模
+            network_sizes = [d['k'] ** d['n'] for d in basic_data]
+            rbf_tolerances = [d['rbf'] for d in basic_data]
+
+            plt.loglog(network_sizes, rbf_tolerances, 'bo-', linewidth=2, markersize=4)
+            plt.xlabel('Network Size (k^n)')
+            plt.ylabel('RBF Fault Tolerance')
+            plt.title('Network Size vs Fault Tolerance')
+            plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_7_network_size.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_8_algorithm_complexity(self, square_size):
+        """创建图8：改进的算法复杂度分析"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'complexity_analysis' in self.performance_data:
+            comp_data = self.performance_data['complexity_analysis']
+
+            sizes = [d['size'] for d in comp_data]
+            times = [d['time'] * 1000000 for d in comp_data]  # 转换为微秒
+            theoretical = [d['theoretical'] for d in comp_data]  # 保持原始理论复杂度
+
+            # 使用双y轴来正确显示两个不同量级的数据
+            ax1 = plt.gca()
+            ax2 = ax1.twinx()
+
+            # 左轴：实际时间（微秒）
+            ax1.semilogx(sizes, times, 'go-', linewidth=2, markersize=6, label='Actual Time (μs)')
+            ax1.set_xlabel('Network Size')
+            ax1.set_ylabel('Actual Time (μs)', color='g')
+            ax1.tick_params(axis='y', labelcolor='g')
+
+            # 右轴：理论复杂度
+            ax2.loglog(sizes, theoretical, 'r--', linewidth=2, markersize=4, label='Theoretical Complexity')
+            ax2.set_ylabel('Theoretical Complexity', color='r')
+            ax2.tick_params(axis='y', labelcolor='r')
+
+            plt.title('Algorithm Complexity (Large Scale)')
+
+            # 合并图例
+            lines1, labels1 = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+
+            ax1.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_8_complexity.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_9_correction_factors(self, square_size):
+        """创建图9：改进的修正因子分布"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'basic_rbf' in self.performance_data:
+            basic_data = self.performance_data['basic_rbf']
+
+            alpha_struct_values = [d['alpha_struct'] for d in basic_data]
+            alpha_spatial_values = [d['alpha_spatial'] for d in basic_data]
+
+            # 使用不同颜色表示不同的n值
+            n_values = [d['n'] for d in basic_data]
+            unique_n = sorted(set(n_values))
+            colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink'][:len(unique_n)]
+
+            for i, n in enumerate(unique_n):
+                mask = [nv == n for nv in n_values]
+                struct_subset = [alpha_struct_values[j] for j, m in enumerate(mask) if m]
+                spatial_subset = [alpha_spatial_values[j] for j, m in enumerate(mask) if m]
+                plt.scatter(struct_subset, spatial_subset,
+                           c=colors[i], alpha=0.7, s=40, label=f'n={n}')
+
+            plt.xlabel('Structural Correction Factor')
+            plt.ylabel('Spatial Correction Factor')
+            plt.title('Correction Factors by Network Arity')
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_9_correction.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_10_multi_parameter_sensitivity(self, square_size):
+        """创建图10：多参数敏感性分析"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        # 生成多参数敏感性数据
+        param_ranges = {
+            'k_max': list(range(1, 6)),
+            's_max': list(range(5, 30, 5)),
+            'd_sep': list(range(1, 6))
+        }
+
+        base_tolerance = 50
+        colors = ['blue', 'red', 'green']
+        markers = ['o-', 's--', '^:']
+
+        for i, (param_name, param_range) in enumerate(param_ranges.items()):
+            tolerances = []
+            for param_val in param_range:
+                if param_name == 'k_max':
+                    tolerance = base_tolerance * (1 + 0.5 * param_val)
+                elif param_name == 's_max':
+                    tolerance = base_tolerance * (1 + 0.02 * param_val)
+                else:  # d_sep
+                    tolerance = base_tolerance * (1 + 0.1 * param_val)
+                tolerances.append(tolerance)
+
+            plt.plot(param_range, tolerances, markers[i],
+                    color=colors[i], label=param_name, linewidth=2, markersize=6)
+
+        plt.xlabel('Parameter Value')
+        plt.ylabel('Fault Tolerance')
+        plt.title('Multi-Parameter Sensitivity Analysis')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_10_multi_param.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_11_dimension_impact(self, square_size):
+        """创建图11：维度对性能提升的影响"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size))
+
+        if 'basic_pef' in self.performance_data:
+            basic_data = self.performance_data['basic_pef']
+
+            # 按维度分组计算平均提升
+            dimension_improvements = {}
+            for d in basic_data:
+                k = d['k']
+                if k not in dimension_improvements:
+                    dimension_improvements[k] = []
+                dimension_improvements[k].append(d['improvement'])
+
+            dimensions = sorted(dimension_improvements.keys())
+            avg_improvements = [np.mean(dimension_improvements[k]) for k in dimensions]
+
+            plt.plot(dimensions, avg_improvements, 'ro-', linewidth=2, markersize=8)
+            plt.xlabel('Network Dimension (k)')
+            plt.ylabel('Average Improvement (%)')
+            plt.title('Dimension vs Performance Improvement')
+            plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_11_dimension.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def create_plot_12_performance_summary(self, square_size):
+        """创建图12：综合性能总结"""
+        fig, ax = plt.subplots(figsize=(square_size, square_size), subplot_kw=dict(projection='polar'))
+
+        # 创建雷达图显示各项性能指标
+        categories = ['Fault\nTolerance', 'Theoretical\nAccuracy', 'Algorithm\nEfficiency',
+                     'Parameter\nStability', 'Bounds\nTightness']
+
+        # 计算各项指标的得分（0-1）
+        scores = []
+
+        # 容错能力得分（基于与PEF的比较和绝对容错能力）
+        if 'basic_pef' in self.performance_data:
+            improvements = [d['improvement'] for d in self.performance_data['basic_pef']]
+            rbf_tolerances = [d['rbf'] for d in self.performance_data['basic_pef']]
+
+            avg_improvement = np.mean(improvements)
+            avg_tolerance = np.mean(rbf_tolerances)
+
+            # 综合考虑改进幅度和绝对容错能力
+            improvement_score = min(1.0, avg_improvement / 150)
+            tolerance_score = min(1.0, avg_tolerance / 50)
+            fault_score = (improvement_score + tolerance_score) / 2
+
+            scores.append(fault_score)
+        else:
+            scores.append(0.6)
+
+        # 理论精确性得分
+        scores.append(1.0)
+
+        # 算法效率得分（基于复杂度分析）
+        if 'complexity_analysis' in self.performance_data:
+            times = [d['time'] for d in self.performance_data['complexity_analysis']]
+            if times:
+                avg_time = np.mean(times)
+                # 调整评分标准：50ms以内为满分，100ms为0.5分，200ms以上为最低分
+                if avg_time <= 0.05:
+                    efficiency_score = 1.0
+                elif avg_time <= 0.1:
+                    efficiency_score = 1.0 - (avg_time - 0.05) / 0.05 * 0.5
+                elif avg_time <= 0.2:
+                    efficiency_score = 0.5 - (avg_time - 0.1) / 0.1 * 0.3
+                else:
+                    efficiency_score = max(0.1, 0.2 - (avg_time - 0.2) / 0.3 * 0.1)
+
+                scores.append(efficiency_score)
+            else:
+                scores.append(0.7)
+        else:
+            # 如果没有复杂度数据，使用默认得分
+            scores.append(0.75)
+
+        # 参数稳定性得分
+        scores.append(0.8)
+
+        # 界限紧性得分
+        if 'tightness_analysis' in self.performance_data:
+            avg_tightness = np.mean([d['tightness'] for d in self.performance_data['tightness_analysis']])
+            tightness_score = avg_tightness
+            scores.append(tightness_score)
+        else:
+            scores.append(0.7)
+
+        # 绘制雷达图
+        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False)
+        scores_plot = scores + [scores[0]]  # 闭合图形
+        angles_plot = np.concatenate((angles, [angles[0]]))
+
+        ax.plot(angles_plot, scores_plot, 'o-', linewidth=2, markersize=6)
+        ax.fill(angles_plot, scores_plot, alpha=0.25)
+        ax.set_xticks(angles)
+        ax.set_xticklabels(categories)
+        ax.set_ylim(0, 1)
+        ax.set_title('Overall Performance Summary')
+        ax.grid(True)
+
+        plt.tight_layout()
+        plt.savefig('individual_plots/plot_12_summary.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def stitch_plots_together(self):
+        """将12个正方形子图拼接成3x4的最终图像"""
+        from PIL import Image
+        import os
+
+        # 检查所有子图是否存在
+        plot_files = [
+            'individual_plots/plot_1_fault_tolerance.png',
+            'individual_plots/plot_2_improvement.png',
+            'individual_plots/plot_3_asymptotic.png',
+            'individual_plots/plot_4_basic_vs_high.png',
+            'individual_plots/plot_5_sensitivity.png',
+            'individual_plots/plot_6_separation.png',
+            'individual_plots/plot_7_network_size.png',
+            'individual_plots/plot_8_complexity.png',
+            'individual_plots/plot_9_correction.png',
+            'individual_plots/plot_10_multi_param.png',
+            'individual_plots/plot_11_dimension.png',
+            'individual_plots/plot_12_summary.png'
+        ]
+
+        # 检查文件是否存在
+        missing_files = [f for f in plot_files if not os.path.exists(f)]
+        if missing_files:
+            print(f"警告：以下子图文件不存在: {missing_files}")
+            return
+
+        # 加载所有图像
+        images = []
+        for file_path in plot_files:
+            try:
+                img = Image.open(file_path)
+                images.append(img)
+            except Exception as e:
+                print(f"无法加载图像 {file_path}: {e}")
+                return
+
+        # 获取单个图像的尺寸（假设所有图像尺寸相同）
+        img_width, img_height = images[0].size
+
+        # 创建最终的拼接图像 (3行4列)
+        final_width = img_width * 4
+        final_height = img_height * 3
+        final_image = Image.new('RGB', (final_width, final_height), 'white')
+
+        # 拼接图像
+        for i, img in enumerate(images):
+            row = i // 4  # 行索引 (0, 1, 2)
+            col = i % 4   # 列索引 (0, 1, 2, 3)
+
+            x = col * img_width
+            y = row * img_height
+
+            final_image.paste(img, (x, y))
+
+        # 保存最终图像
+        final_image.save('comprehensive_theory_analysis.png', dpi=(300, 300))
+        print("最终拼接图像已保存为: comprehensive_theory_analysis.png")
+
+        # 清理临时文件（可选）
+        # for file_path in plot_files:
+        #     os.remove(file_path)
 
     def print_comprehensive_summary(self):
         """打印综合分析总结"""
@@ -1385,21 +1546,20 @@ class ComprehensiveTheoryAnalyzer:
         total_count = len(all_analyses)
 
         for analysis_name, result in all_analyses:
-            status = "完成" if result else "未完成"
-            print(f"{analysis_name}: {status}")
+            print(f"{analysis_name}: {result}")
 
         print(f"分析完成率: {completed_count}/{total_count} ({completed_count/total_count*100:.1f}%)")
 
-        # 添加理论分析结论
-        print("\n理论分析结论（基于56个数据点的全面分析）:")
-        print("- RBF模型提供了基于故障簇的容错分析框架，适用于3-9元、3-10维网络")
-        print("- 结构修正因子和空间修正因子反映了网络的容错优势，在所有56个配置中表现一致")
-        print("- 相比PEF模型，RBF模型在大多数情况下提供更高的容错能力")
-        print("- 修正因子随维度增加呈递减趋势，符合理论预期，在所有测试配置中验证")
-        print("- 故障簇的几何性质影响网络的容错性能，112个簇配置分析证实了这一点")
-        print("- 哈密尔顿性充分条件 k_max × s_max < k/4 为路径构造提供保证")
-        print("- 算法复杂度为O(N)，其中N为网络节点数，在56个配置中具有良好的可扩展性")
-        print("- 理论界限具有较好的紧性，修正因子在合理范围内，所有56个案例验证通过")
+        # 理论分析结论
+        print("\n理论分析结论（基于56个数据点的数学分析）:")
+        print("- RBF模型基于故障簇的容错分析框架，覆盖3-9元、3-10维网络")
+        print("- 结构修正因子和空间修正因子计算结果在所有56个配置中的数学一致性")
+        print("- 与PEF模型的数值比较显示RBF模型的理论容错上界")
+        print("- 修正因子随维度增加的变化趋势")
+        print("- 故障簇的几何性质通过112个簇配置的数学计算")
+        print("- 哈密尔顿性充分条件 k_max × s_max < k/4 的数学验证")
+        print("- 算法复杂度为O(N)，其中N为网络节点数，在56个配置中的计算复杂度分析")
+        print("- 理论界限紧性的数学计算，修正因子数值范围分析")
 
         # 添加数值总结
         if 'basic_pef' in self.performance_data:
@@ -1477,22 +1637,22 @@ class ComprehensiveTheoryAnalyzer:
 
                 if path and len(path) > 0:
                     success_count += 1
-                    print(f"    {n}元{k}维: 成功 (路径长度={len(path)})")
+                    print(f"    {n}元{k}维: 路径构造完成 (路径长度={len(path)})")
                 else:
-                    print(f"    {n}元{k}维: 失败 (无路径)")
+                    print(f"    {n}元{k}维: 无路径返回")
 
             except Exception as e:
                 print(f"    {n}元{k}维: 错误 ({str(e)[:50]}...)")
 
         success_rate = (success_count / total_tests) * 100
-        print(f"  严格算法测试结果: {success_count}/{total_tests} 成功 ({success_rate:.1f}%)")
+        print(f"  算法测试结果: {success_count}/{total_tests} ({success_rate:.1f}%)")
 
-        # 比较理论符合性
-        print("  理论符合性验证:")
-        print("    ✓ 分离度函数: 严格按照 Separation(d, 𝒞) = Σ Isolation(C_i, d)")
-        print("    ✓ 路径缝合: 严格按照算法5.1实现")
-        print("    ✓ 基础情况: 专门的2D哈密尔顿路径处理")
-        print("    ✓ 递归结构: 严格按照算法4.1的6个步骤")
+        # 理论实现对应性
+        print("  理论实现对应性:")
+        print("    - 分离度函数: 按照 Separation(d, 𝒞) = Σ Isolation(C_i, d)")
+        print("    - 路径缝合: 按照算法5.1实现")
+        print("    - 基础情况: 2D哈密尔顿路径处理")
+        print("    - 递归结构: 按照算法4.1的6个步骤")
 
     def _calculate_pef_tolerance(self, n: int, k: int) -> int:
         """计算PEF模型容错上界 - 使用origin_pef.py中的正确公式"""
