@@ -12,6 +12,7 @@ import math
 import sys
 import os
 import time
+import timeit
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -347,23 +348,32 @@ class ComprehensiveTheoryAnalyzer:
                 spatial_correlation=0.5,
                 cluster_separation=2
             )
-            
-            start_time = time.time()
-            analyzer = RegionBasedFaultAnalyzer(Q, rbf_params)
-            _ = analyzer.calculate_rbf_fault_tolerance()
-            computation_time = time.time() - start_time
-            
+
+            # 使用更精确的时间测量，进行多次测量取平均值
+            def single_calculation():
+                analyzer = RegionBasedFaultAnalyzer(Q, rbf_params)
+                return analyzer.calculate_rbf_fault_tolerance()
+
+            # 进行多次测量以获得更准确的时间
+            num_runs = 10
+            start_time = time.perf_counter()
+            for _ in range(num_runs):
+                result = single_calculation()
+            end_time = time.perf_counter()
+
+            computation_time = (end_time - start_time) / num_runs
+
             network_size = k ** n
             complexity_data.append({
                 'n': n, 'k': k, 'size': network_size, 'time': computation_time
             })
-            
-            print(f"  {n}元{k}维: 网络大小={network_size}, 计算时间={computation_time:.4f}s")
+
+            print(f"  {n}元{k}维: 网络大小={network_size}, 计算时间={computation_time:.6f}s (平均{num_runs}次)")
         
         max_time = max(d['time'] for d in complexity_data)
         reasonable_growth = max_time < 10.0
         
-        self.test_results['high_dim_complexity'] = reasonable_growth
+        self.analysis_results['high_dim_complexity'] = reasonable_growth
         self.performance_data['complexity'] = complexity_data
         
 
@@ -422,7 +432,7 @@ class ComprehensiveTheoryAnalyzer:
             print(f"  {name}: 基准={base_tolerance}, 扰动={perturbed_tolerance}, "
                   f"变化={relative_change:.1f}% {status}")
         
-        self.test_results['high_dim_stability'] = stability_passed
+        self.analysis_results['high_dim_stability'] = stability_passed
 
     def run_performance_analysis(self):
         """深度性能分析"""
@@ -602,14 +612,16 @@ class ComprehensiveTheoryAnalyzer:
             plt.subplot(2, 3, 6)
             if 'basic_rbf' in self.performance_data and 'high_dim_rbf' in self.performance_data:
                 all_errors = []
-                all_errors.extend([d['error'] for d in self.performance_data['basic_rbf']])
-                all_errors.extend([d['error'] for d in self.performance_data['high_dim_rbf']])
+                # 计算理论值与计算值之间的误差
+                all_errors.extend([abs(d['theoretical'] - d['calculated']) for d in self.performance_data['basic_rbf']])
+                all_errors.extend([abs(d['theoretical'] - d['calculated']) for d in self.performance_data['high_dim_rbf']])
 
-                plt.hist(all_errors, bins=10, alpha=0.7, color='green', edgecolor='black')
-                plt.xlabel('Absolute Error')
-                plt.ylabel('Frequency')
-                plt.title('Theoretical Formula Accuracy')
-                plt.grid(True, alpha=0.3)
+                if all_errors:  # 只有在有数据时才绘制
+                    plt.hist(all_errors, bins=10, alpha=0.7, color='green', edgecolor='black')
+                    plt.xlabel('Absolute Error')
+                    plt.ylabel('Frequency')
+                    plt.title('Theoretical Formula Accuracy')
+                    plt.grid(True, alpha=0.3)
 
             plt.tight_layout()
             plt.savefig('comprehensive_theory_analysis.png', dpi=300, bbox_inches='tight')
