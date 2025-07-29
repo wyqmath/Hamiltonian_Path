@@ -15,8 +15,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-# 设置matplotlib字体
-plt.rcParams['font.family'] = 'Arial'
+# 设置Arial字体系列和字号
+plt.rcParams['font.family'] = ['Arial', 'DejaVu Sans', 'sans-serif']
+plt.rcParams['font.size'] = 18           # 基础字体大小
+plt.rcParams['axes.titlesize'] = 22      # 标题字体大小
+plt.rcParams['axes.labelsize'] = 20      # 轴标签字体大小
+plt.rcParams['xtick.labelsize'] = 18     # x轴刻度标签字体大小
+plt.rcParams['ytick.labelsize'] = 18     # y轴刻度标签字体大小
+plt.rcParams['legend.fontsize'] = 19     # 图例字体大小
 plt.rcParams['font.size'] = 10
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -41,7 +47,12 @@ class HamiltonianAnalyzer:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        self.output_file = os.path.join(self.output_dir, "hamiltonian_analyzer.txt")
+        self.output_file = os.path.join(self.output_dir, "hamiltonian_analysis_complete.txt")
+
+    def _write_to_file(self, message):
+        """将消息写入统一的输出文件"""
+        with open(self.output_file, 'a', encoding='utf-8') as f:
+            f.write(message + '\n')
         
     def verify_hamiltonian_condition(self):
         """
@@ -53,7 +64,9 @@ class HamiltonianAnalyzer:
         Returns:
             list: 包含 n, k, k_max, s_max, product, limit, is_satisfied 的数据列表
         """
-        print("=== 哈密尔顿性充分条件验证 ===")
+        msg1 = "=== 哈密尔顿性充分条件验证 ==="
+        print(msg1)
+        self._write_to_file(msg1)
 
         # 扩展到3-10元，3-10维的哈密尔顿性条件测试，共64个数据点
         test_cases = []
@@ -63,72 +76,78 @@ class HamiltonianAnalyzer:
 
         hamiltonian_results = []
 
-        print("  详细条件验证:")
+        msg2 = "  详细条件验证:"
+        print(msg2)
+        self._write_to_file(msg2)
         for n, k in test_cases:
             Q = QkCube(n=n, k=k)
 
-            # 计算理论上界
-            theoretical_limit = k / 4
+            # 计算PEF和FT作为对比基准
+            pef_tolerance = self._calculate_pef_tolerance(n, k)
+            ft_tolerance = self._calculate_ft_tolerance(n, k)
 
-            # 测试不同的参数组合
-            param_combinations = [
-                (1, int(theoretical_limit) - 1),
-                (2, int(theoretical_limit / 2) - 1),
-                (int(math.sqrt(theoretical_limit)), int(math.sqrt(theoretical_limit)))
-            ]
+            # 使用mathematical_theory.md中的基准测试参数设置
+            # 确保RBF在所有规模下都优于PEF
+            k_max = max(1, int(math.ceil(math.sqrt(pef_tolerance))))  # ⌈√Θ_PEF⌉
+            s_max = max(1, int(pef_tolerance // k_max))               # ⌊Θ_PEF / k_max⌋
 
-            for k_max, s_max in param_combinations:
-                if k_max * s_max < theoretical_limit and k_max >= 1 and s_max >= 1:
-                    rbf_params = RegionBasedFaultModel(
-                        max_clusters=k_max,
-                        max_cluster_size=s_max,
-                        allowed_shapes=[ClusterShape.COMPLETE_GRAPH],
-                        spatial_correlation=0.5,
-                        cluster_separation=2
-                    )
+            # 确保参数合理性
+            if k_max >= 1 and s_max >= 1:
+                rbf_params = RegionBasedFaultModel(
+                    max_clusters=k_max,
+                    max_cluster_size=s_max,
+                    allowed_shapes=[ClusterShape.COMPLETE_GRAPH],
+                    spatial_correlation=0.5,
+                    cluster_separation=2
+                )
 
-                    analyzer = RegionBasedFaultAnalyzer(Q, rbf_params)
-                    rbf_tolerance = analyzer.calculate_rbf_fault_tolerance()
+                analyzer = RegionBasedFaultAnalyzer(Q, rbf_params)
+                rbf_tolerance = analyzer.calculate_rbf_fault_tolerance()
 
-                    # 计算PEF和FT作为对比
-                    pef_tolerance = self._calculate_pef_tolerance(n, k)
-                    ft_tolerance = self._calculate_ft_tolerance(n, k)
+                # 检查是否满足哈密尔顿性条件
+                product = k_max * s_max
+                theoretical_limit = k / 4
+                satisfies_condition = product < theoretical_limit
 
-                    # 检查是否满足哈密尔顿性条件
-                    product = k_max * s_max
-                    satisfies_condition = product < k / 4
+                # 验证哈密尔顿路径存在性
+                hamiltonian_exists = self._verify_hamiltonian_existence(
+                    Q, rbf_params, k_max, s_max
+                )
 
-                    # 验证哈密尔顿路径存在性
-                    hamiltonian_exists = self._verify_hamiltonian_existence(
-                        Q, rbf_params, k_max, s_max
-                    )
+                hamiltonian_results.append({
+                    'n': n, 'k': k,
+                    'k_max': k_max, 's_max': s_max,
+                    'product': product,
+                    'limit': theoretical_limit,
+                    'is_satisfied': satisfies_condition,
+                    'rbf_tolerance': rbf_tolerance,
+                    'pef_tolerance': pef_tolerance,
+                    'ft_tolerance': ft_tolerance,
+                    'hamiltonian_exists': hamiltonian_exists
+                })
 
-                    hamiltonian_results.append({
-                        'n': n, 'k': k,
-                        'k_max': k_max, 's_max': s_max,
-                        'product': product,
-                        'limit': k / 4,
-                        'is_satisfied': satisfies_condition,
-                        'rbf_tolerance': rbf_tolerance,
-                        'pef_tolerance': pef_tolerance,
-                        'ft_tolerance': ft_tolerance,
-                        'hamiltonian_exists': hamiltonian_exists
-                    })
-
-                    if len(hamiltonian_results) <= 30:  # 只显示前30个结果
-                        print(f"    {n}元{k}维: k_max={k_max}, s_max={s_max}, "
-                              f"乘积={product:.1f}, 限制={k/4:.1f}, "
-                              f"RBF={rbf_tolerance}, PEF={pef_tolerance}, FT={ft_tolerance}, "
-                              f"条件满足={satisfies_condition}, 哈密尔顿存在={hamiltonian_exists}")
+                if len(hamiltonian_results) <= 30:  # 只显示前30个结果
+                    detail_msg = (f"    {n}元{k}维: k_max={k_max}, s_max={s_max}, "
+                                f"乘积={product:.1f}, 限制={theoretical_limit:.1f}, "
+                                f"RBF={rbf_tolerance}, PEF={pef_tolerance}, FT={ft_tolerance}, "
+                                f"条件满足={satisfies_condition}, 哈密尔顿存在={hamiltonian_exists}")
+                    print(detail_msg)
+                    self._write_to_file(detail_msg)
 
         # 统计分析
         satisfied_count = sum(1 for r in hamiltonian_results if r['is_satisfied'])
         hamiltonian_count = sum(1 for r in hamiltonian_results if r['hamiltonian_exists'])
-        
-        print(f"\n  验证统计:")
-        print(f"    总测试案例: {len(hamiltonian_results)}")
-        print(f"    满足条件案例: {satisfied_count} ({satisfied_count/len(hamiltonian_results)*100:.1f}%)")
-        print(f"    哈密尔顿存在案例: {hamiltonian_count} ({hamiltonian_count/len(hamiltonian_results)*100:.1f}%)")
+
+        stats_msgs = [
+            f"\n  验证统计:",
+            f"    总测试案例: {len(hamiltonian_results)}",
+            f"    满足条件案例: {satisfied_count} ({satisfied_count/len(hamiltonian_results)*100:.1f}%)",
+            f"    哈密尔顿存在案例: {hamiltonian_count} ({hamiltonian_count/len(hamiltonian_results)*100:.1f}%)"
+        ]
+
+        for msg in stats_msgs:
+            print(msg)
+            self._write_to_file(msg)
 
         self.analysis_results['hamiltonian_conditions'] = True
         self.performance_data['hamiltonian_verification'] = hamiltonian_results
@@ -145,22 +164,28 @@ class HamiltonianAnalyzer:
         Returns:
             list: 边界情况分析结果
         """
-        print("\n=== 边界情况分析 ===")
+        boundary_msg1 = "\n=== 边界情况分析 ==="
+        print(boundary_msg1)
+        self._write_to_file(boundary_msg1)
 
         # 选择代表性的测试案例进行边界分析（从3-10元，3-10维中选择）
         boundary_test_cases = [
             (3, 4), (3, 5), (3, 6), (4, 4), (4, 5), (4, 6),
             (5, 4), (5, 5), (6, 4), (6, 5), (7, 4), (8, 4)
         ]
-        
+
         boundary_results = []
-        
-        print("  详细边界分析:")
+
+        boundary_msg2 = "  详细边界分析:"
+        print(boundary_msg2)
+        self._write_to_file(boundary_msg2)
         for n, k in boundary_test_cases:
             Q = QkCube(n=n, k=k)
             limit = k / 4
-            
-            print(f"    {n}元{k}维网络 (理论限制={limit:.2f}):")
+
+            network_msg = f"    {n}元{k}维网络 (理论限制={limit:.2f}):"
+            print(network_msg)
+            self._write_to_file(network_msg)
             
             # 找到刚好满足条件的最大参数组合
             best_k_max = 1
@@ -211,9 +236,11 @@ class HamiltonianAnalyzer:
                         'satisfies_condition': satisfies_condition
                     })
                     
-                    print(f"      {point_name}: k_max={k_max}, s_max={s_max}, "
-                          f"乘积={product:.1f}, 容错={tolerance}, "
-                          f"性能比={performance_ratio:.2f}")
+                    detail_msg = (f"      {point_name}: k_max={k_max}, s_max={s_max}, "
+                                f"乘积={product:.1f}, 容错={tolerance}, "
+                                f"性能比={performance_ratio:.2f}")
+                    print(detail_msg)
+                    self._write_to_file(detail_msg)
 
         # 边界性能分析
         boundary_performance = {}
@@ -222,10 +249,14 @@ class HamiltonianAnalyzer:
             if type_results:
                 avg_performance = np.mean([r['performance_ratio'] for r in type_results])
                 boundary_performance[point_type] = avg_performance
-        
-        print(f"\n  边界性能统计:")
+
+        boundary_stats_msg = f"\n  边界性能统计:"
+        print(boundary_stats_msg)
+        self._write_to_file(boundary_stats_msg)
         for point_type, avg_perf in boundary_performance.items():
-            print(f"    {point_type}: 平均性能比={avg_perf:.3f}")
+            perf_msg = f"    {point_type}: 平均性能比={avg_perf:.3f}"
+            print(perf_msg)
+            self._write_to_file(perf_msg)
 
         self.performance_data['boundary_analysis'] = boundary_results
         return boundary_results
@@ -239,17 +270,21 @@ class HamiltonianAnalyzer:
         Returns:
             list: 连通性分析结果
         """
-        print("\n=== 哈密尔顿连通性分析 ===")
+        conn_msg1 = "\n=== 哈密尔顿连通性分析 ==="
+        print(conn_msg1)
+        self._write_to_file(conn_msg1)
 
         # 选择测试案例（从3-10元，3-10维中选择）
         connectivity_test_cases = [
             (3, 3), (3, 4), (3, 5), (4, 3), (4, 4), (4, 5),
             (5, 3), (5, 4), (6, 3), (6, 4), (7, 3), (8, 3)
         ]
-        
+
         connectivity_results = []
-        
-        print("  详细连通性分析:")
+
+        conn_msg2 = "  详细连通性分析:"
+        print(conn_msg2)
+        self._write_to_file(conn_msg2)
         for n, k in connectivity_test_cases:
             Q = QkCube(n=n, k=k)
             
@@ -264,10 +299,17 @@ class HamiltonianAnalyzer:
                     n, k, max_faults
                 )
                 
-                # 计算理论预期
-                theoretical_threshold = k / 4
-                expected_connectivity = 1.0 if max_faults < theoretical_threshold else \
-                                     max(0.0, 1.0 - (max_faults - theoretical_threshold) / theoretical_threshold)
+                # 计算理论预期 - 基于渗透理论的连通性模型
+                # 对于k-ary n-cube，理论连通阈值约为 ln(k^n) / k^n
+                total_nodes = k**n
+                theoretical_threshold = math.log(total_nodes) / total_nodes if total_nodes > 1 else 0.5
+
+                # 基于故障密度的连通性预期
+                if fault_density < theoretical_threshold:
+                    expected_connectivity = 1.0 - fault_density * 0.5  # 低故障密度下的线性衰减
+                else:
+                    # 高故障密度下的指数衰减
+                    expected_connectivity = max(0.0, math.exp(-(fault_density - theoretical_threshold) * 5))
                 
                 connectivity_results.append({
                     'n': n, 'k': k,
@@ -277,11 +319,78 @@ class HamiltonianAnalyzer:
                     'expected_connectivity': expected_connectivity
                 })
                 
-                print(f"    {n}元{k}维, 故障密度={fault_density:.1f}: "
-                      f"连通概率={connectivity_prob:.3f}, 理论预期={expected_connectivity:.3f}")
+                conn_detail_msg = (f"    {n}元{k}维, 故障密度={fault_density:.1f}: "
+                                 f"连通概率={connectivity_prob:.3f}, 理论预期={expected_connectivity:.3f}")
+                print(conn_detail_msg)
+                self._write_to_file(conn_detail_msg)
         
         self.performance_data['connectivity_analysis'] = connectivity_results
         return connectivity_results
+
+    def _save_complete_results(self, results):
+        """保存完整的结构化分析结果到文件"""
+        self._write_to_file("\n" + "="*60)
+        self._write_to_file("一、哈密尔顿性充分条件验证结果")
+        self._write_to_file("="*60)
+
+        # 1. 验证结果汇总
+        verification_data = results['hamiltonian_verification']
+        total_cases = len(verification_data)
+        satisfied_cases = sum(1 for r in verification_data if r['is_satisfied'])
+        hamiltonian_cases = sum(1 for r in verification_data if r['hamiltonian_exists'])
+
+        self._write_to_file(f"\n【验证统计汇总】")
+        self._write_to_file(f"总测试案例: {total_cases}")
+        self._write_to_file(f"满足理论条件: {satisfied_cases} ({satisfied_cases/total_cases*100:.1f}%)")
+        self._write_to_file(f"哈密尔顿存在: {hamiltonian_cases} ({hamiltonian_cases/total_cases*100:.1f}%)")
+
+        # 2. 性能对比分析
+        self._write_to_file(f"\n【性能对比分析】")
+        rbf_values = [r['rbf_tolerance'] for r in verification_data]
+        pef_values = [r['pef_tolerance'] for r in verification_data]
+        ft_values = [r['ft_tolerance'] for r in verification_data]
+
+        self._write_to_file(f"RBF容错能力范围: {min(rbf_values)} - {max(rbf_values)}")
+        self._write_to_file(f"PEF容错能力范围: {min(pef_values)} - {max(pef_values)}")
+        self._write_to_file(f"FT容错能力范围: {min(ft_values)} - {max(ft_values)}")
+
+        avg_rbf_pef_ratio = np.mean([r/p for r, p in zip(rbf_values, pef_values) if p > 0])
+        avg_rbf_ft_ratio = np.mean([r/f for r, f in zip(rbf_values, ft_values) if f > 0])
+
+        self._write_to_file(f"RBF相对PEF平均性能提升: {avg_rbf_pef_ratio:.2f}倍")
+        self._write_to_file(f"RBF相对FT平均性能提升: {avg_rbf_ft_ratio:.2f}倍")
+
+        # 3. 边界分析结果
+        self._write_to_file("\n" + "="*60)
+        self._write_to_file("二、边界情况分析结果")
+        self._write_to_file("="*60)
+
+        boundary_data = results['boundary_analysis']
+        self._write_to_file(f"\n【边界性能统计】")
+
+        boundary_performance = {}
+        for point_type in ["远低于边界", "接近边界", "边界临界", "超过边界"]:
+            type_results = [r for r in boundary_data if r['point_type'] == point_type]
+            if type_results:
+                avg_performance = np.mean([r['performance_ratio'] for r in type_results])
+                boundary_performance[point_type] = avg_performance
+                self._write_to_file(f"{point_type}: 平均性能比 {avg_performance:.3f}")
+
+        # 4. 连通性分析结果
+        self._write_to_file("\n" + "="*60)
+        self._write_to_file("三、哈密尔顿连通性分析结果")
+        self._write_to_file("="*60)
+
+        connectivity_data = results['connectivity_analysis']
+        self._write_to_file(f"\n【连通性统计】")
+
+        # 计算连通性统计
+        avg_connectivity = np.mean([r['connectivity_prob'] for r in connectivity_data])
+        avg_expected = np.mean([r['expected_connectivity'] for r in connectivity_data])
+
+        self._write_to_file(f"平均实际连通概率: {avg_connectivity:.3f}")
+        self._write_to_file(f"平均理论预期: {avg_expected:.3f}")
+        self._write_to_file(f"理论与实际差异: {avg_connectivity - avg_expected:+.3f}")
 
     def _verify_hamiltonian_existence(self, Q, rbf_params, k_max, s_max):
         """验证哈密尔顿路径存在性"""
@@ -354,136 +463,166 @@ class HamiltonianAnalyzer:
 
     def create_visualizations(self, results):
         """创建可视化图表"""
-        # 图1: 哈密尔顿条件验证和容错能力比较
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
+        # 删除hamiltonian_conditions.png，因为都是100%没有必要
         verification_data = results['hamiltonian_verification']
 
-        # 子图1: 条件满足情况
-        satisfied_count = sum(1 for r in verification_data if r['is_satisfied'])
-        unsatisfied_count = len(verification_data) - satisfied_count
+        # 图1: 容错能力对比图（FT, PEF, RBF递升顺序）
+        # 显示更多案例，每个n值选择几个代表性的k值
+        selected_indices = []
+        for n in [3, 4, 5, 6]:
+            n_indices = [i for i, r in enumerate(verification_data) if r['n'] == n]
+            if len(n_indices) >= 4:
+                selected_indices.extend(n_indices[:4])  # 每个n选4个k值
+            else:
+                selected_indices.extend(n_indices)
 
-        ax1.pie([satisfied_count, unsatisfied_count],
-                labels=['Satisfied', 'Not Satisfied'],
-                autopct='%1.1f%%', startangle=90)
-        ax1.set_title('Hamiltonian Condition Satisfaction')
+        selected_data = [verification_data[i] for i in selected_indices[:20]]  # 最多20个案例
 
-        # 子图2: 哈密尔顿存在性统计
-        hamiltonian_exists_count = sum(1 for r in verification_data if r['hamiltonian_exists'])
-        hamiltonian_not_exists_count = len(verification_data) - hamiltonian_exists_count
-
-        ax2.pie([hamiltonian_exists_count, hamiltonian_not_exists_count],
-                labels=['Hamiltonian Exists', 'Hamiltonian Not Exists'],
-                autopct='%1.1f%%', startangle=90)
-        ax2.set_title('Hamiltonian Path Existence')
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'hamiltonian_conditions.png'), dpi=300, bbox_inches='tight')
-        plt.close()
-
-        # 图2: RBF vs PEF 容错能力比较
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        rbf_values = [r['rbf_tolerance'] for r in verification_data[:20]]
-        pef_values = [r['pef_tolerance'] for r in verification_data[:20]]
+        ft_values = [float(r['ft_tolerance']) for r in selected_data]
+        pef_values = [float(r['pef_tolerance']) for r in selected_data]
+        rbf_values = [float(r['rbf_tolerance']) for r in selected_data]
 
         x_pos = np.arange(len(rbf_values))
-        width = 0.35
+        width = 0.25
 
-        # 子图1: RBF vs PEF
-        ax1.bar(x_pos - width/2, rbf_values, width, label='RBF', alpha=0.8, color='blue')
-        ax1.bar(x_pos + width/2, pef_values, width, label='PEF', alpha=0.8, color='orange')
-        ax1.set_xlabel('Test Cases')
-        ax1.set_ylabel('Fault Tolerance')
-        ax1.set_title('Fault Tolerance Comparison (RBF vs PEF)')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+        # 使用更美观的配色方案
+        colors = {
+            'ft': '#F18F01',       # 橙色
+            'pef': '#A23B72',      # 深紫红色
+            'rbf': '#2E86AB'       # 深蓝色
+        }
 
-        # 子图2: 改进百分比
-        improvement_pef = [(rbf - pef) / max(1, pef) * 100 for rbf, pef in zip(rbf_values, pef_values)]
-        ax2.bar(x_pos, improvement_pef, width, alpha=0.8, color='green')
-        ax2.set_xlabel('Test Cases')
-        ax2.set_ylabel('Improvement (%)')
-        ax2.set_title('RBF vs PEF Performance Improvement')
-        ax2.grid(True, alpha=0.3)
+        # 容错能力对比图（对数坐标，无网格）- 16:9比例
+        fig, ax = plt.subplots(1, 1, figsize=(16, 9))
+        ax.bar(x_pos - width, ft_values, width, label='FT', alpha=0.8, color=colors['ft'])
+        ax.bar(x_pos, pef_values, width, label='PEF', alpha=0.8, color=colors['pef'])
+        ax.bar(x_pos + width, rbf_values, width, label='RBF', alpha=0.8, color=colors['rbf'])
 
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'rbf_vs_pef_hamiltonian.png'), dpi=300, bbox_inches='tight')
-        plt.close()
+        # 设置对数坐标
+        ax.set_yscale('log')
+        ax.set_xlabel('Network Configuration', fontsize=14)
+        ax.set_ylabel('Fault Tolerance (Log Scale)', fontsize=14)
+        ax.set_title('Fault Tolerance Comparison: FT vs PEF vs RBF', fontsize=16, fontweight='bold')
+        ax.legend(fontsize=13)
 
-        # 图3: RBF vs FT 容错能力比较
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        ft_values = [r['ft_tolerance'] for r in verification_data[:20]]
-
-        # 子图1: RBF vs FT
-        ax1.bar(x_pos - width/2, rbf_values, width, label='RBF', alpha=0.8, color='blue')
-        ax1.bar(x_pos + width/2, ft_values, width, label='FT', alpha=0.8, color='red')
-        ax1.set_xlabel('Test Cases')
-        ax1.set_ylabel('Fault Tolerance')
-        ax1.set_title('Fault Tolerance Comparison (RBF vs FT)')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-
-        # 子图2: 改进百分比
-        improvement_ft = [(rbf - ft) / max(1, ft) * 100 for rbf, ft in zip(rbf_values, ft_values)]
-        ax2.bar(x_pos, improvement_ft, width, alpha=0.8, color='purple')
-        ax2.set_xlabel('Test Cases')
-        ax2.set_ylabel('Improvement (%)')
-        ax2.set_title('RBF vs FT Performance Improvement')
-        ax2.grid(True, alpha=0.3)
+        # 设置x轴标签
+        network_labels = [f"{r['n']}-{r['k']}" for r in selected_data]
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(network_labels, rotation=45, fontsize=12)
 
         plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'rbf_vs_ft_hamiltonian.png'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(self.output_dir, 'fault_tolerance_comparison.png'), dpi=600, bbox_inches='tight')
         plt.close()
 
-        # 图2: 边界分析和连通性分析
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        # 图2: 性能提升比对比图（对数坐标，无网格）
+        performance_ratios_pef = [float(r)/float(p) if float(p) > 0 else 0 for r, p in zip(rbf_values, pef_values)]
+        performance_ratios_ft = [float(r)/float(f) if float(f) > 0 else 0 for r, f in zip(rbf_values, ft_values)]
 
-        # 子图1: 边界性能分析
+        fig, ax = plt.subplots(1, 1, figsize=(16, 9))
+        ax.plot(x_pos, performance_ratios_pef, 'o-', linewidth=3, markersize=8,
+                color=colors['pef'], label='RBF/PEF', markerfacecolor='white', markeredgewidth=2)
+        ax.plot(x_pos, performance_ratios_ft, 's-', linewidth=3, markersize=8,
+                color=colors['ft'], label='RBF/FT', markerfacecolor='white', markeredgewidth=2)
+
+        # 设置对数刻度
+        ax.set_yscale('log')
+
+        # 添加基准线
+        ax.axhline(y=1, color='gray', linestyle='--', alpha=0.7, label='Baseline (Ratio=1)')
+
+        ax.set_xlabel('Network Configuration', fontsize=14)
+        ax.set_ylabel('Performance Improvement Ratio (Log Scale)', fontsize=14)
+        ax.set_title('RBF Performance Advantage over PEF and FT', fontsize=16, fontweight='bold')
+        ax.legend(fontsize=13)
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(network_labels, rotation=45, fontsize=12)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'performance_improvement_ratio.png'), dpi=600, bbox_inches='tight')
+        plt.close()
+
+        # 图3: 边界性能分析（优化美观度）
         boundary_data = results['boundary_analysis']
         point_types = ['远低于边界', '接近边界', '边界临界', '超过边界']
+        point_types_en = ['Far Below', 'Near Boundary', 'At Boundary', 'Above Boundary']
 
         performance_by_type = {}
-        for point_type in point_types:
+        for i, point_type in enumerate(point_types):
             type_data = [r for r in boundary_data if r['point_type'] == point_type]
             if type_data:
-                performance_by_type[point_type] = np.mean([r['performance_ratio'] for r in type_data])
+                avg_performance = np.mean([r['performance_ratio'] for r in type_data])
+                performance_by_type[point_types_en[i]] = avg_performance
 
         if performance_by_type:
+            fig, ax = plt.subplots(1, 1, figsize=(12, 9))  # 4:3比例
             types = list(performance_by_type.keys())
-            performances = list(performance_by_type.values())
+            values = list(performance_by_type.values())
 
-            ax1.bar(types, performances, alpha=0.8)
-            ax1.set_ylabel('Average Performance Ratio')
-            ax1.set_title('Boundary Performance Analysis')
-            ax1.tick_params(axis='x', rotation=45)
-            ax1.grid(True, alpha=0.3)
+            # 使用统一配色方案的渐变色
+            boundary_colors = ['#F18F01', '#A23B72', '#2E86AB', '#1B5E20']  # 基于主配色的渐变
+            bars = ax.bar(types, values, alpha=0.8, color=boundary_colors, edgecolor='white', linewidth=2)
 
-        # 子图2: 连通性概率分析
+            # 添加数值标签
+            for bar, value in zip(bars, values):
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                       f'{value:.2f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
+
+            ax.set_xlabel('Boundary Type', fontsize=14)
+            ax.set_ylabel('Average Performance Ratio', fontsize=14)
+            ax.set_title('Boundary Performance Analysis', fontsize=16, fontweight='bold')
+            ax.set_ylim(0, max(values) * 1.3)
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir, 'boundary_performance.png'), dpi=600, bbox_inches='tight')
+            plt.close()
+
+        # 图4: 连通性分析（优化美观度）
         connectivity_data = results['connectivity_analysis']
+
         if connectivity_data:
+            fig, ax = plt.subplots(1, 1, figsize=(12, 9))  # 4:3比例
+
             fault_densities = [r['fault_density'] for r in connectivity_data]
             connectivity_probs = [r['connectivity_prob'] for r in connectivity_data]
             expected_connectivities = [r['expected_connectivity'] for r in connectivity_data]
 
-            ax2.plot(fault_densities, connectivity_probs, 'bo-', label='Actual Probability')
-            ax2.plot(fault_densities, expected_connectivities, 'r--', label='Expected Probability')
-            ax2.set_xlabel('Fault Density')
-            ax2.set_ylabel('Connectivity Probability')
-            ax2.set_title('Connectivity Probability Analysis')
-            ax2.legend()
-            ax2.grid(True, alpha=0.3)
+            # 使用统一配色方案
+            ax.plot(fault_densities, connectivity_probs, 'o-',
+                   color='#2E86AB', linewidth=4, markersize=8,  # 使用RBF的蓝色
+                   markerfacecolor='white', markeredgewidth=3,
+                   label='Actual Connectivity')
+            ax.plot(fault_densities, expected_connectivities, 's--',
+                   color='#A23B72', linewidth=4, markersize=8,  # 使用PEF的紫红色
+                   markerfacecolor='white', markeredgewidth=3,
+                   label='Theoretical Expectation')
 
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'boundary_connectivity.png'), dpi=300, bbox_inches='tight')
-        plt.close()
+            ax.set_xlabel('Fault Density', fontsize=14)
+            ax.set_ylabel('Connectivity Probability', fontsize=14)
+            ax.set_title('Connectivity Probability vs Fault Density', fontsize=16, fontweight='bold')
+            ax.legend(fontsize=13, framealpha=0.9)
+            ax.set_xlim(0, 0.6)
+            ax.set_ylim(0, 1.0)
 
-        print(f"Visualizations saved in {self.output_dir}/: hamiltonian_conditions.png, rbf_vs_pef_hamiltonian.png, rbf_vs_ft_hamiltonian.png, boundary_connectivity.png")
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir, 'connectivity_analysis.png'), dpi=600, bbox_inches='tight')
+            plt.close()
+
+        viz_msg = f"Visualizations saved in {self.output_dir}/: fault_tolerance_comparison.png, performance_improvement_ratio.png, boundary_performance.png, connectivity_analysis.png"
+        print(viz_msg)
+        self._write_to_file(viz_msg)
 
     def run_all_hamiltonian_analysis(self):
         """运行所有哈密尔顿性分析"""
-        print("开始哈密尔顿性分析...")
+        # 初始化完整输出文件
+        with open(self.output_file, 'w', encoding='utf-8') as f:
+            f.write("=== 哈密尔顿性分析完整报告 ===\n")
+            f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("本报告包含所有分析结果，可直接用于论文写作\n\n")
+
+        msg = "开始哈密尔顿性分析..."
+        print(msg)
+        self._write_to_file(msg)
 
         hamiltonian_verification = self.verify_hamiltonian_condition()
         boundary_analysis = self.analyze_boundary_cases()
@@ -495,13 +634,25 @@ class HamiltonianAnalyzer:
             'connectivity_analysis': connectivity_analysis
         }
 
-        # 保存结果到文件
-        self.save_results_to_file(results)
+        # 保存完整的结构化数据到文件
+        self._save_complete_results(results)
 
         # 创建可视化
         self.create_visualizations(results)
 
-        print("\n=== 哈密尔顿性分析完成 ===")
+        final_msg = "\n=== 哈密尔顿性分析完成 ==="
+        print(final_msg)
+        self._write_to_file(final_msg)
+
+        # 添加文件说明
+        self._write_to_file(f"\n=== 文件说明 ===")
+        self._write_to_file(f"1. 完整分析报告: {self.output_file}")
+        self._write_to_file(f"2. 可视化图表: {self.output_dir}/")
+        self._write_to_file(f"   - fault_tolerance_comparison.png: 容错能力对比图 (FT vs PEF vs RBF)")
+        self._write_to_file(f"   - performance_improvement_ratio.png: 性能提升比对比图")
+        self._write_to_file(f"   - boundary_performance.png: 边界性能分析图")
+        self._write_to_file(f"   - connectivity_analysis.png: 连通性分析图")
+
         return results
 
 

@@ -1,0 +1,254 @@
+=== Performance Analysis Complete Report ===
+Generated at: 2025-07-29 16:52:25
+
+Starting performance analysis...
+=== Algorithm Complexity Analysis ===
+  Detailed complexity testing:
+    3-ary 3-cube: Network size=27, Execution time=0.000002s, RBF=20, PEF=8, FT=3
+    3-ary 4-cube: Network size=64, Execution time=0.000001s, RBF=33, PEF=15, FT=3
+    3-ary 5-cube: Network size=125, Execution time=0.000001s, RBF=41, PEF=24, FT=3
+    3-ary 6-cube: Network size=216, Execution time=0.000001s, RBF=64, PEF=35, FT=3
+    3-ary 7-cube: Network size=343, Execution time=0.000001s, RBF=89, PEF=48, FT=3
+    4-ary 3-cube: Network size=81, Execution time=0.000001s, RBF=48, PEF=33, FT=5
+    4-ary 4-cube: Network size=256, Execution time=0.000001s, RBF=134, PEF=77, FT=5
+    4-ary 5-cube: Network size=625, Execution time=0.000002s, RBF=271, PEF=147, FT=5
+    4-ary 6-cube: Network size=1296, Execution time=0.000001s, RBF=485, PEF=249, FT=5
+    4-ary 7-cube: Network size=2401, Execution time=0.000001s, RBF=782, PEF=389, FT=5
+    5-ary 3-cube: Network size=243, Execution time=0.000001s, RBF=194, PEF=112, FT=7
+    5-ary 4-cube: Network size=1024, Execution time=0.000001s, RBF=648, PEF=331, FT=7
+    5-ary 5-cube: Network size=3125, Execution time=0.000001s, RBF=1607, PEF=770, FT=7
+    5-ary 6-cube: Network size=7776, Execution time=0.000001s, RBF=3293, PEF=1543, FT=7
+    5-ary 7-cube: Network size=16807, Execution time=0.000001s, RBF=6075, PEF=2788, FT=7
+    6-ary 3-cube: Network size=729, Execution time=0.000001s, RBF=659, PEF=353, FT=9
+    6-ary 4-cube: Network size=4096, Execution time=0.000001s, RBF=2648, PEF=1353, FT=9
+    6-ary 5-cube: Network size=15625, Execution time=0.000001s, RBF=7828, PEF=3893, FT=9
+    6-ary 6-cube: Network size=46656, Execution time=0.000001s, RBF=19142, PEF=9317, FT=9
+    7-ary 3-cube: Network size=2187, Execution time=0.000001s, RBF=1997, PEF=1080, FT=11
+    7-ary 4-cube: Network size=16384, Execution time=0.000001s, RBF=10403, PEF=5447, FT=11
+    7-ary 5-cube: Network size=78125, Execution time=0.000001s, RBF=38145, PEF=19516, FT=11
+    8-ary 3-cube: Network size=6561, Execution time=0.000001s, RBF=5934, PEF=3265, FT=13
+    8-ary 4-cube: Network size=65536, Execution time=0.000001s, RBF=40770, PEF=21829, FT=13
+    9-ary 3-cube: Network size=19683, Execution time=0.000001s, RBF=17561, PEF=9824, FT=15
+    10-ary 3-cube: Network size=59049, Execution time=0.000001s, RBF=52009, PEF=29505, FT=17
+
+  Complexity fitting results:
+    Fitting formula: time ≈ size^-0.048 * 1.51e-06
+    Theoretical complexity: O(N) where N = k^n
+    Performance evaluation: Acceptable
+
+=== Average Path Length Analysis ===
+  Detailed path length analysis:
+    3-ary 3-cube, fault dimension 0: average path length=26.43
+    3-ary 3-cube, fault dimension 1: average path length=27.31
+    3-ary 3-cube, fault dimension 2: average path length=28.19
+    3-ary 4-cube, fault dimension 0: average path length=64.31
+    3-ary 4-cube, fault dimension 1: average path length=66.45
+    3-ary 4-cube, fault dimension 2: average path length=68.60
+    3-ary 5-cube, fault dimension 0: average path length=126.99
+    3-ary 5-cube, fault dimension 1: average path length=131.23
+    3-ary 5-cube, fault dimension 2: average path length=135.46
+    4-ary 3-cube, fault dimension 0: average path length=81.76
+    4-ary 3-cube, fault dimension 1: average path length=83.80
+    4-ary 3-cube, fault dimension 2: average path length=85.85
+    4-ary 3-cube, fault dimension 3: average path length=87.89
+    4-ary 4-cube, fault dimension 0: average path length=262.07
+    4-ary 4-cube, fault dimension 1: average path length=268.62
+    4-ary 4-cube, fault dimension 2: average path length=275.17
+    4-ary 4-cube, fault dimension 3: average path length=281.73
+    4-ary 5-cube, fault dimension 0: average path length=644.09
+    4-ary 5-cube, fault dimension 1: average path length=660.19
+    4-ary 5-cube, fault dimension 2: average path length=676.29
+    4-ary 5-cube, fault dimension 3: average path length=692.39
+    5-ary 3-cube, fault dimension 0: average path length=248.65
+    5-ary 3-cube, fault dimension 1: average path length=253.62
+    5-ary 3-cube, fault dimension 2: average path length=258.59
+    5-ary 3-cube, fault dimension 3: average path length=263.57
+    5-ary 3-cube, fault dimension 4: average path length=268.54
+    5-ary 4-cube, fault dimension 0: average path length=1058.45
+    5-ary 4-cube, fault dimension 1: average path length=1079.62
+    5-ary 4-cube, fault dimension 2: average path length=1100.79
+    5-ary 4-cube, fault dimension 3: average path length=1121.96
+    5-ary 4-cube, fault dimension 4: average path length=1143.13
+    6-ary 3-cube, fault dimension 0: average path length=751.99
+    6-ary 3-cube, fault dimension 1: average path length=764.53
+    6-ary 3-cube, fault dimension 2: average path length=777.06
+    6-ary 3-cube, fault dimension 3: average path length=789.59
+    6-ary 3-cube, fault dimension 4: average path length=802.13
+    6-ary 3-cube, fault dimension 5: average path length=814.66
+    6-ary 4-cube, fault dimension 0: average path length=4265.31
+    6-ary 4-cube, fault dimension 1: average path length=4336.39
+    6-ary 4-cube, fault dimension 2: average path length=4407.48
+    6-ary 4-cube, fault dimension 3: average path length=4478.57
+    6-ary 4-cube, fault dimension 4: average path length=4549.66
+    6-ary 4-cube, fault dimension 5: average path length=4620.75
+    7-ary 3-cube, fault dimension 0: average path length=2270.05
+    7-ary 3-cube, fault dimension 1: average path length=2302.48
+    7-ary 3-cube, fault dimension 2: average path length=2334.91
+    7-ary 3-cube, fault dimension 3: average path length=2367.34
+    7-ary 3-cube, fault dimension 4: average path length=2399.77
+    7-ary 3-cube, fault dimension 5: average path length=2432.20
+    7-ary 3-cube, fault dimension 6: average path length=2464.63
+    8-ary 3-cube, fault dimension 0: average path length=6848.28
+    8-ary 3-cube, fault dimension 1: average path length=6933.88
+    8-ary 3-cube, fault dimension 2: average path length=7019.48
+    8-ary 3-cube, fault dimension 3: average path length=7105.09
+    8-ary 3-cube, fault dimension 4: average path length=7190.69
+    8-ary 3-cube, fault dimension 5: average path length=7276.29
+    8-ary 3-cube, fault dimension 6: average path length=7361.90
+    8-ary 3-cube, fault dimension 7: average path length=7447.50
+
+=== Parameter Sensitivity Analysis ===
+  1. max_clusters sensitivity:
+    max_clusters=1: fault tolerance=30
+    max_clusters=2: fault tolerance=60
+    max_clusters=3: fault tolerance=90
+    max_clusters=4: fault tolerance=120
+    max_clusters=5: fault tolerance=151
+  2. max_cluster_size sensitivity:
+    max_cluster_size=5: fault tolerance=20
+    max_cluster_size=10: fault tolerance=40
+    max_cluster_size=15: fault tolerance=60
+    max_cluster_size=20: fault tolerance=80
+    max_cluster_size=25: fault tolerance=100
+  3. cluster_separation sensitivity:
+    cluster_separation=1: fault tolerance=58
+    cluster_separation=2: fault tolerance=60
+    cluster_separation=3: fault tolerance=61
+    cluster_separation=4: fault tolerance=63
+    cluster_separation=5: fault tolerance=64
+  4. spatial_correlation sensitivity:
+    spatial_correlation=0.1: fault tolerance=70
+    spatial_correlation=0.3: fault tolerance=65
+    spatial_correlation=0.5: fault tolerance=60
+    spatial_correlation=0.7: fault tolerance=55
+    spatial_correlation=0.9: fault tolerance=50
+
+=== Detailed Performance Analysis Results ===
+
+1. Algorithm Complexity Results:
+n	k	Network_Size	Execution_Time(s)	RBF	PEF	FT
+3	3	27	0.000002	20	8	3
+3	4	64	0.000001	33	15	3
+3	5	125	0.000001	41	24	3
+3	6	216	0.000001	64	35	3
+3	7	343	0.000001	89	48	3
+4	3	81	0.000001	48	33	5
+4	4	256	0.000001	134	77	5
+4	5	625	0.000002	271	147	5
+4	6	1296	0.000001	485	249	5
+4	7	2401	0.000001	782	389	5
+5	3	243	0.000001	194	112	7
+5	4	1024	0.000001	648	331	7
+5	5	3125	0.000001	1607	770	7
+5	6	7776	0.000001	3293	1543	7
+5	7	16807	0.000001	6075	2788	7
+6	3	729	0.000001	659	353	9
+6	4	4096	0.000001	2648	1353	9
+6	5	15625	0.000001	7828	3893	9
+6	6	46656	0.000001	19142	9317	9
+7	3	2187	0.000001	1997	1080	11
+7	4	16384	0.000001	10403	5447	11
+7	5	78125	0.000001	38145	19516	11
+8	3	6561	0.000001	5934	3265	13
+8	4	65536	0.000001	40770	21829	13
+9	3	19683	0.000001	17561	9824	15
+10	3	59049	0.000001	52009	29505	17
+
+2. Average Path Length Results:
+n	k	Fault_Dimension	Average_Path_Length
+3	3	0	26.43
+3	3	1	27.31
+3	3	2	28.19
+3	4	0	64.31
+3	4	1	66.45
+3	4	2	68.60
+3	5	0	126.99
+3	5	1	131.23
+3	5	2	135.46
+4	3	0	81.76
+4	3	1	83.80
+4	3	2	85.85
+4	3	3	87.89
+4	4	0	262.07
+4	4	1	268.62
+4	4	2	275.17
+4	4	3	281.73
+4	5	0	644.09
+4	5	1	660.19
+4	5	2	676.29
+4	5	3	692.39
+5	3	0	248.65
+5	3	1	253.62
+5	3	2	258.59
+5	3	3	263.57
+5	3	4	268.54
+5	4	0	1058.45
+5	4	1	1079.62
+5	4	2	1100.79
+5	4	3	1121.96
+5	4	4	1143.13
+6	3	0	751.99
+6	3	1	764.53
+6	3	2	777.06
+6	3	3	789.59
+6	3	4	802.13
+6	3	5	814.66
+6	4	0	4265.31
+6	4	1	4336.39
+6	4	2	4407.48
+6	4	3	4478.57
+6	4	4	4549.66
+6	4	5	4620.75
+7	3	0	2270.05
+7	3	1	2302.48
+7	3	2	2334.91
+7	3	3	2367.34
+7	3	4	2399.77
+7	3	5	2432.20
+7	3	6	2464.63
+8	3	0	6848.28
+8	3	1	6933.88
+8	3	2	7019.48
+8	3	3	7105.09
+8	3	4	7190.69
+8	3	5	7276.29
+8	3	6	7361.90
+8	3	7	7447.50
+
+3. Parameter Sensitivity Results:
+
+max_clusters:
+Value	Tolerance
+1	30
+2	60
+3	90
+4	120
+5	151
+
+max_cluster_size:
+Value	Tolerance
+5	20
+10	40
+15	60
+20	80
+25	100
+
+cluster_separation:
+Value	Tolerance
+1	58
+2	60
+3	61
+4	63
+5	64
+
+spatial_correlation:
+Value	Tolerance
+0.1	70
+0.3	65
+0.5	60
+0.7	55
+0.9	50
+Results saved to performance_analyzer\analysis_complete.txt
+Visualizations saved in performance_analyzer/: fault_tolerance_comparison.png, performance_improvement_comparison.png, parameter_sensitivity.png
+
+=== Performance Analysis Complete ===
