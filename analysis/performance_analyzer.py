@@ -7,6 +7,8 @@
 1. analyze_algorithm_complexity() - 算法复杂度分析
 2. analyze_average_path_length() - 平均路径长度分析
 3. analyze_parameter_sensitivity() - 参数敏感性分析
+
+注意：容错能力对比分析已移至 hamiltonian_analyzer.py 以避免重复。
 """
 
 import math
@@ -441,35 +443,14 @@ class PerformanceAnalyzer:
         ft_values = [r['ft_tolerance'] for r in complexity_data]
 
         # 删除算法复杂度分析图表 - 对于简单的数学计算没有分析价值
+        # 删除容错能力对比图表 - 避免与hamiltonian_analyzer.py重复
 
         # 创建测试案例标签 (n-k格式)
         test_labels = [f"{r['n']}-{r['k']}" for r in complexity_data]
         x_pos = np.arange(len(complexity_data))
         width = 0.25
 
-        # 图1: 三算法容错能力对比 (16:9比例) - 排序：FT, PEF, RBF
-        fig, ax = plt.subplots(1, 1, figsize=(16, 9))
-
-        ax.bar(x_pos - width, ft_values, width, label='FT',
-               alpha=0.8, color=colors['ft'], edgecolor='white', linewidth=2)
-        ax.bar(x_pos, pef_values, width, label='PEF',
-               alpha=0.8, color=colors['pef'], edgecolor='white', linewidth=2)
-        ax.bar(x_pos + width, rbf_values, width, label='RBF',
-               alpha=0.8, color=colors['rbf'], edgecolor='white', linewidth=2)
-
-        ax.set_xlabel('Network Configuration', fontsize=20)
-        ax.set_ylabel('Fault Tolerance (Log Scale)', fontsize=20)
-        ax.set_title('Fault Tolerance Comparison: FT vs PEF vs RBF', fontsize=22, fontweight='bold')
-        ax.set_yscale('log')
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(test_labels, rotation=0, ha='center')  # 不旋转，因为标签更短
-        ax.legend(fontsize=19)
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'fault_tolerance_comparison.png'), dpi=600, bbox_inches='tight')
-        plt.close()
-
-        # 图2: RBF性能改进对比 (16:9比例) - 使用对数刻度
+        # 图1: RBF性能改进对比 (16:9比例) - 使用对数刻度
         fig, ax = plt.subplots(1, 1, figsize=(16, 9))
 
         # 计算RBF相对改进百分比
@@ -554,7 +535,7 @@ class PerformanceAnalyzer:
         plt.savefig(os.path.join(self.output_dir, 'parameter_sensitivity.png'), dpi=600, bbox_inches='tight')
         plt.close()
 
-        viz_msg = f"Visualizations saved in {self.output_dir}/: fault_tolerance_comparison.png, performance_improvement_comparison.png, parameter_sensitivity.png"
+        viz_msg = f"Visualizations saved in {self.output_dir}/: performance_improvement_comparison.png, parameter_sensitivity.png"
         print(viz_msg)
         self._write_to_file(viz_msg)
 
