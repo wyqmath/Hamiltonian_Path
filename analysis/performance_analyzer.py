@@ -1,14 +1,6 @@
 """
 性能分析器 (PerformanceAnalyzer)
 
-核心目标：回答"算法跑得有多快？生成的路径质量如何？"这个问题。
-
-主要功能：
-1. analyze_algorithm_complexity() - 算法复杂度分析
-2. analyze_average_path_length() - 平均路径长度分析
-3. analyze_parameter_sensitivity() - 参数敏感性分析
-
-注意：容错能力对比分析已移至 hamiltonian_analyzer.py 以避免重复。
 """
 
 import math

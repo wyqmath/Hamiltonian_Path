@@ -285,24 +285,42 @@ class PropertyAnalyzer:
         """生成不同的故障簇配置，包含多种形状和分布"""
         configurations = []
 
-        # 配置1: Complete Graph簇 (紧密连接)
-        center1 = tuple([0] * n)
-        config1 = [self._create_realistic_cluster(center1, 0, 4, n, k, ClusterShape.COMPLETE_GRAPH, "compact")]
+        # 配置1: 两个Complete Graph簇在不同位置 (测试分离度)
+        center1_a = tuple([0] * n)
+        center1_b = tuple([k//2 if i == 0 else 0 for i in range(n)])  # 在第0维分离
+        cluster1_a = self._create_realistic_cluster(center1_a, 0, 4, n, k, ClusterShape.COMPLETE_GRAPH, "compact")
+        cluster1_b = self._create_realistic_cluster(center1_b, 1, 4, n, k, ClusterShape.COMPLETE_GRAPH, "compact")
+        config1 = [cluster1_a, cluster1_b]
         configurations.append(config1)
 
-        # 配置2: Star Graph簇 (星形分布)
-        center2 = tuple([k//2] * n)
-        config2 = [self._create_realistic_cluster(center2, 1, 5, n, k, ClusterShape.STAR_GRAPH, "dispersed")]
+        # 配置2: 两个Star Graph簇在不同维度分离
+        center2_a = tuple([0] * n)
+        center2_b = tuple([0 if i != 1 else k//2 for i in range(n)])  # 在第1维分离
+        cluster2_a = self._create_realistic_cluster(center2_a, 2, 5, n, k, ClusterShape.STAR_GRAPH, "dispersed")
+        cluster2_b = self._create_realistic_cluster(center2_b, 3, 5, n, k, ClusterShape.STAR_GRAPH, "dispersed")
+        config2 = [cluster2_a, cluster2_b]
         configurations.append(config2)
 
-        # 配置3: 混合配置 (不同大小和形状)
+        # 配置3: 三个簇的混合配置 (测试多簇分离)
         if n >= 3:
-            center3 = tuple([k-1 if i < n//2 else 0 for i in range(n)])
-            # 根据网络规模选择形状
-            shape = ClusterShape.COMPLETE_GRAPH if (n * k) % 2 == 0 else ClusterShape.STAR_GRAPH
-            distribution = "medium"
-            config3 = [self._create_realistic_cluster(center3, 2, 6, n, k, shape, distribution)]
+            center3_a = tuple([0] * n)
+            center3_b = tuple([k//3 if i == 0 else 0 for i in range(n)])  # 第0维分离
+            center3_c = tuple([0 if i != 2 else k//2 for i in range(n)])  # 第2维分离
+
+            cluster3_a = self._create_realistic_cluster(center3_a, 4, 4, n, k, ClusterShape.COMPLETE_GRAPH, "compact")
+            cluster3_b = self._create_realistic_cluster(center3_b, 5, 4, n, k, ClusterShape.STAR_GRAPH, "medium")
+            cluster3_c = self._create_realistic_cluster(center3_c, 6, 4, n, k, ClusterShape.COMPLETE_GRAPH, "medium")
+            config3 = [cluster3_a, cluster3_b, cluster3_c]
             configurations.append(config3)
+
+        # 配置4: 对角线分布的簇 (测试多维度分离)
+        if n >= 2:
+            center4_a = tuple([0] * n)
+            center4_b = tuple([k//2] * n)  # 所有维度都分离
+            cluster4_a = self._create_realistic_cluster(center4_a, 7, 4, n, k, ClusterShape.COMPLETE_GRAPH, "compact")
+            cluster4_b = self._create_realistic_cluster(center4_b, 8, 4, n, k, ClusterShape.STAR_GRAPH, "dispersed")
+            config4 = [cluster4_a, cluster4_b]
+            configurations.append(config4)
 
         return configurations
 
@@ -404,21 +422,58 @@ class PropertyAnalyzer:
         )
 
     def _calculate_separation_score(self, clusters, dimension):
-        """计算指定维度的分离度得分"""
+        """
+        计算指定维度的分离度得分
+
+        分离度得分衡量簇在指定维度上的分散程度，得分越高表示该维度越适合作为分解维度。
+        计算方法：
+        1. 提取所有簇在指定维度上的中心位置
+        2. 计算位置差异的标准差（反映分散程度）
+        3. 考虑簇的大小和分布，给予权重调整
+        """
         if len(clusters) < 2:
             return 0.0
 
         # 计算簇在指定维度上的分离程度
         dim_positions = []
+        cluster_weights = []  # 簇的权重（基于大小）
+
         for cluster in clusters:
-            if cluster.center:
+            if cluster.center and len(cluster.center) > dimension:
                 dim_positions.append(cluster.center[dimension])
+                # 簇的权重基于其大小，大簇的位置更重要
+                cluster_weights.append(max(1.0, cluster.size * 0.1))
 
         if len(dim_positions) < 2:
             return 0.0
 
-        # 计算位置差异的标准差作为分离度
-        return np.std(dim_positions)
+        # 计算加权标准差作为基础分离度
+        weighted_mean = np.average(dim_positions, weights=cluster_weights)
+        weighted_variance = np.average((np.array(dim_positions) - weighted_mean)**2, weights=cluster_weights)
+        base_separation = np.sqrt(weighted_variance)
+
+        # 计算最小和最大距离，增强分离度的区分能力
+        min_pos = min(dim_positions)
+        max_pos = max(dim_positions)
+        range_factor = max_pos - min_pos
+
+        # 计算簇间的最小距离，避免重叠簇的影响
+        min_distance = float('inf')
+        for i in range(len(dim_positions)):
+            for j in range(i+1, len(dim_positions)):
+                distance = abs(dim_positions[i] - dim_positions[j])
+                min_distance = min(min_distance, distance)
+
+        if min_distance == float('inf'):
+            min_distance = 0
+
+        # 综合分离度得分：基础分离度 + 范围因子 + 最小距离奖励
+        separation_score = base_separation + range_factor * 0.3 + min_distance * 0.2
+
+        # 多簇奖励：簇数量越多，分离度计算越有意义
+        cluster_count_bonus = (len(clusters) - 2) * 0.1
+
+        return separation_score + cluster_count_bonus
 
     def _create_cluster_edges(self, center, shape, k, n, target_size):
         """创建指定形状的簇边和节点"""
